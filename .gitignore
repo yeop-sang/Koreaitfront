@@ -1,0 +1,6 @@
+node_modules
+dist
+
+# local-only mock setup
+.local/
+vite.config.local.ts
