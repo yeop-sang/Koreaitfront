@@ -3,7 +3,7 @@ name: Build & Deploy Vite App
 on:
   push:
     branches:
-      - main  # 또는 master
+      - main
 
 jobs:
   build-and-deploy:
@@ -13,6 +13,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3   
+        with:
+          version: 9                 
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -20,10 +25,10 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm run build
+        run: pnpm build
 
       - name: Deploy via rsync
         uses: burnett01/rsync-deployments@8.0.3
@@ -31,6 +36,6 @@ jobs:
           switches: -avz --delete
           path: dist/
           remote_path: ~/team-dragon/nginx/html/
-          remote_host: sanarae.duckdns.org
+          remote_host: console.yeop.kr
           remote_user: ubuntu
           remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
