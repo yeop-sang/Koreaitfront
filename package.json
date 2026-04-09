@@ -5,7 +5,10 @@
   "type": "module",
   "scripts": {
     "build": "vite build",
-    "dev": "vite"
+    "dev": "vite",
+    "mock:login": "[ -f .local/mock-login-server.mjs ] || (echo '[mock:login] Missing .local/mock-login-server.mjs (ignored by git). Run local mock setup first.' && exit 1); node .local/mock-login-server.mjs",
+    "ddev": "pnpm dlx concurrently -k -n MOCK,APP -c yellow,cyan \"pnpm mock:login\" \"vite --config vite.config.local.ts\"",
+    "ddev:info": "echo 'ddev/mock:login can fail only at execution time when local-only files are missing. .local/* and vite.config.local.ts are git-ignored by design.'"
   },
   "dependencies": {
     "@emotion/react": "11.14.0",
