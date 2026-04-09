@@ -122,3 +122,21 @@ pnpm build
 - 현재 `package.json` 기준으로 제공되는 스크립트는 `dev`, `build` 두 가지입니다.
 - 테스트, 린트, 백엔드 API 연동 설정은 아직 포함되어 있지 않습니다.
 - `index.html` 타이틀 등 일부 초기 템플릿 흔적은 남아 있을 수 있지만, 실제 앱 내용은 취업 포트폴리오 관리 흐름에 맞춰 구성되어 있습니다.
+  Run `npm run dev` to start the development server.
+
+  ## Local Mock Login (Optional)
+
+  Local mock files are intentionally git-ignored.
+  This means `mock:login` and `ddev` do not affect normal development commands,
+  but they can fail at runtime if local-only files are missing.
+
+  - Normal app run: `pnpm dev` (no mock required)
+  - Mock server only: `pnpm mock:login`
+  - Mock + app together: `pnpm ddev`
+  - Show behavior note: `pnpm ddev:info`
+
+  Required local-only files for mock flow:
+
+  - `.local/mock-login-server.mjs`
+  - `vite.config.local.ts`
+  
