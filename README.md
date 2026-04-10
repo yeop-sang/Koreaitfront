@@ -121,7 +121,11 @@ pnpm build
 
 - `VITE_API_BASE_URL`
   - 예시: `http://localhost:3001`
+  - `/api` 접두사는 프론트에서 붙이므로 환경 변수에는 포함하지 않습니다.
   - 비워두면 상대 경로 `/api/...`를 사용합니다.
+- `VITE_API_PROXY_TARGET`
+  - 개발 서버에서 `/api/...` 요청을 프록시할 대상입니다.
+  - 기본값은 `http://localhost:8000`입니다.
 
 ## 참고 사항
 
