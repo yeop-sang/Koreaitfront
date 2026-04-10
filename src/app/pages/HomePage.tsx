@@ -4,6 +4,7 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { API_ENDPOINTS } from '../config/api';
 
 type LoginResponse = {
   isSuccess: boolean;
@@ -76,7 +77,7 @@ export function HomePage() {
     setErrorMessage('');
 
     try {
-      const response = await fetch('/api/login', {
+      const response = await fetch(API_ENDPOINTS.login, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

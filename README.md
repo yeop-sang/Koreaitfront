@@ -101,6 +101,7 @@ src/
 
 ```bash
 pnpm install
+cp .env.example .env
 pnpm dev
 ```
 
@@ -115,6 +116,12 @@ http://localhost:5173
 ```bash
 pnpm build
 ```
+
+## 환경 변수
+
+- `VITE_API_BASE_URL`
+  - 예시: `http://localhost:3001`
+  - 비워두면 상대 경로 `/api/...`를 사용합니다.
 
 ## 참고 사항
 

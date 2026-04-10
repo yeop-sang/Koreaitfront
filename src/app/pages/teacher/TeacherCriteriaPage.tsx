@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
@@ -22,6 +22,7 @@ import {
 import { Plus, Save, ArrowLeft, Trash2, Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../../components/ui/utils";
+import { fetchInstructorStudents } from "../../api/instructor";
 
 interface Student {
   id: string;
@@ -45,23 +46,9 @@ export function TeacherCriteriaPage() {
   const navigate = useNavigate();
   const { courseName, assignmentDesc, files } = location.state || {};
 
-  // Mock available students database
-  const availableStudents = [
-    { id: "s1", name: "김철수", phone: "1234" },
-    { id: "s2", name: "이영희", phone: "5678" },
-    { id: "s3", name: "박민수", phone: "9012" },
-    { id: "s4", name: "김철수", phone: "3456" }, // 동명이인
-    { id: "s5", name: "최지은", phone: "7890" },
-    { id: "s6", name: "정현우", phone: "2345" },
-    { id: "s7", name: "이영희", phone: "6789" }, // 동명이인
-  ];
-
   // Selected students for this assignment
-  const [students, setStudents] = useState<Student[]>([
-    { id: "s1", name: "김철수" },
-    { id: "s2", name: "이영희" },
-    { id: "s3", name: "박민수" },
-  ]);
+  const [availableStudents, setAvailableStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
 
   // Mock auto-generated criteria from backend analysis
   const [criteria, setCriteria] = useState<Criterion[]>([
@@ -92,6 +79,31 @@ export function TeacherCriteriaPage() {
   const [isAddingCriterion, setIsAddingCriterion] = useState(false);
   const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [openStudentCombobox, setOpenStudentCombobox] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadStudents = async () => {
+      const instructorId = localStorage.getItem("userId") || "0000";
+
+      try {
+        const fetchedStudents = await fetchInstructorStudents(instructorId);
+        if (!isMounted) return;
+
+        setAvailableStudents(fetchedStudents);
+        setStudents(fetchedStudents);
+      } catch {
+        if (!isMounted) return;
+        toast.error("학생 목록 조회에 실패했습니다.");
+      }
+    };
+
+    loadStudents();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const getScore = (criterionId: string, studentId: string): string => {
     const score = scores.find(
@@ -339,7 +351,7 @@ export function TeacherCriteriaPage() {
                                       .map((student) => (
                                         <CommandItem
                                           key={student.id}
-                                          value={`${student.name}${student.phone}`}
+                                          value={`${student.name}${student.id}`}
                                           onSelect={() => addStudent(student.id)}
                                         >
                                           <Check
@@ -348,7 +360,7 @@ export function TeacherCriteriaPage() {
                                               "opacity-0"
                                             )}
                                           />
-                                          {student.name}{student.phone}
+                                          {student.name} ({student.id})
                                         </CommandItem>
                                       ))}
                                   </CommandGroup>
