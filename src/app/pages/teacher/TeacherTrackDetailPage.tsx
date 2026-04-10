@@ -23,69 +23,57 @@ import { Plus, Save, ArrowLeft, Trash2, Check, ChevronsUpDown, FileCheck } from 
 import { toast } from "sonner";
 import { cn } from "../../components/ui/utils";
 import { fetchInstructorStudents } from "../../api/instructor";
+import {
+  DEFAULT_TRACK_CRITERIA,
+  TeacherCriterion,
+  TeacherTrackScore,
+  TeacherTrackStudent,
+  getTeacherTrackRecord,
+  getTeacherTrackSummary,
+  getTodayDateString,
+  upsertTeacherTrackRecord,
+} from "../../data/teacherTrackStorage";
 
 interface AvailableStudent {
   id: string;
   name: string;
 }
 
-interface Student {
-  id: string;
-  name: string;
-  hasSubmitted: boolean;
-  isApproved: boolean;
-}
-
-interface Criterion {
-  id: string;
-  name: string;
-  description: string;
-}
-
-interface Score {
-  criterionId: string;
-  studentId: string;
-  value: string;
-}
+type Student = TeacherTrackStudent;
+type Criterion = TeacherCriterion;
+type Score = TeacherTrackScore;
 
 export function TeacherTrackDetailPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { trackId } = useParams();
-  const { trackName, trackDescription, files, isNew } = location.state || {};
+  const locationState =
+    (location.state as
+      | {
+          trackName?: string;
+          trackDescription?: string;
+          files?: string[];
+          isNew?: boolean;
+        }
+      | null) ?? null;
+  const savedTrack = trackId ? getTeacherTrackRecord(trackId) : null;
+  const trackSummary = trackId ? getTeacherTrackSummary(trackId) : null;
+  const trackName = savedTrack?.name ?? locationState?.trackName ?? trackSummary?.name ?? "";
+  const trackDescription =
+    savedTrack?.description ??
+    locationState?.trackDescription ??
+    trackSummary?.description ??
+    "";
+  const files = savedTrack?.files ?? locationState?.files ?? [];
+  const createdAt = savedTrack?.createdAt ?? trackSummary?.createdAt ?? getTodayDateString();
+  const isNew = locationState?.isNew ?? false;
 
   const [availableStudents, setAvailableStudents] = useState<AvailableStudent[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-
-  const [criteria, setCriteria] = useState<Criterion[]>([
-    {
-      id: "c1",
-      name: "API 설계 능력",
-      description: "RESTful 원칙 준수 및 명세화 역량",
-    },
-    {
-      id: "c2",
-      name: "DB 정규화",
-      description: "정규화 규칙에 따른 테이블 분리",
-    },
-    {
-      id: "c3",
-      name: "DB 튜닝",
-      description: "커넥션 풀 조절",
-    },
-    {
-      id: "c4",
-      name: "코드 구조",
-      description: "코드의 구조화 및 모듈화 수준",
-    },
-    {
-      id: "c5",
-      name: "테스트 커버리지",
-      description: "단위 테스트 및 통합 테스트 완성도",
-    },
-  ]);
-
-  const [scores, setScores] = useState<Score[]>([]);
+  const [students, setStudents] = useState<Student[]>(savedTrack?.students ?? []);
+  const [criteria, setCriteria] = useState<Criterion[]>(
+    savedTrack?.criteria.length ? savedTrack.criteria : DEFAULT_TRACK_CRITERIA
+  );
+  const [scores, setScores] = useState<Score[]>(savedTrack?.scores ?? []);
   const [newCriterionName, setNewCriterionName] = useState("");
   const [isAddingCriterion, setIsAddingCriterion] = useState(false);
   const [isAddingStudent, setIsAddingStudent] = useState(false);
@@ -102,14 +90,18 @@ export function TeacherTrackDetailPage() {
         if (!isMounted) return;
 
         setAvailableStudents(fetchedStudents);
-        setStudents(
-          fetchedStudents.map((student) => ({
+        setStudents((prevStudents) => {
+          if (prevStudents.length > 0) {
+            return prevStudents;
+          }
+
+          return fetchedStudents.map((student) => ({
             id: student.id,
             name: student.name,
             hasSubmitted: false,
             isApproved: false,
-          }))
-        );
+          }));
+        });
       } catch {
         if (!isMounted) return;
         toast.error("학생 목록 조회에 실패했습니다.");
@@ -194,12 +186,29 @@ export function TeacherTrackDetailPage() {
   };
 
   const handleSave = async () => {
+    if (!trackId || !trackName) {
+      toast.error("저장할 트랙 정보를 찾을 수 없습니다.");
+      return;
+    }
+
+    upsertTeacherTrackRecord({
+      id: trackId,
+      name: trackName,
+      description: trackDescription || "강의 자료 기반 평가표",
+      assignmentDesc: trackDescription,
+      files,
+      createdAt,
+      criteria,
+      students,
+      scores,
+    });
+
     toast.success("평가표가 저장되었습니다!");
   };
 
   const pendingReviews = students.filter((s) => s.hasSubmitted && !s.isApproved);
 
-  if (!trackName && !trackId) {
+  if (!trackName) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
         <Card className="p-6">
@@ -240,7 +249,7 @@ export function TeacherTrackDetailPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-3xl">{trackName || "트랙 이름"}</CardTitle>
+            <CardTitle className="text-3xl">{trackName}</CardTitle>
             {trackDescription && (
               <p className="text-sm text-gray-600 mt-2">{trackDescription}</p>
             )}

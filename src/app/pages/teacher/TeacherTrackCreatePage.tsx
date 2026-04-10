@@ -7,6 +7,12 @@ import { Textarea } from "../../components/ui/textarea";
 import { Label } from "../../components/ui/label";
 import { ArrowLeft, Upload, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  DEFAULT_TRACK_CRITERIA,
+  generateTeacherTrackId,
+  getTodayDateString,
+  upsertTeacherTrackRecord,
+} from "../../data/teacherTrackStorage";
 
 export function TeacherTrackCreatePage() {
   const navigate = useNavigate();
@@ -49,14 +55,28 @@ export function TeacherTrackCreatePage() {
 
     // Mock API call - AI가 평가지표 생성
     setTimeout(() => {
+      const nextTrackId = generateTeacherTrackId();
+      const nextFiles = uploadedFiles.map((file) => file.name);
+
+      upsertTeacherTrackRecord({
+        id: nextTrackId,
+        name: trackName.trim(),
+        description: trackDescription.trim(),
+        assignmentDesc: trackDescription.trim(),
+        files: nextFiles,
+        createdAt: getTodayDateString(),
+        criteria: DEFAULT_TRACK_CRITERIA,
+        students: [],
+        scores: [],
+      });
+
       setIsUploading(false);
       toast.success("트랙이 생성되었습니다!");
-      // Navigate to track detail page with generated criteria
-      navigate("/teacher/track/t3", {
+      navigate(`/teacher/track/${nextTrackId}`, {
         state: {
-          trackName,
-          trackDescription,
-          files: uploadedFiles.map((f) => f.name),
+          trackName: trackName.trim(),
+          trackDescription: trackDescription.trim(),
+          files: nextFiles,
           isNew: true,
         },
       });

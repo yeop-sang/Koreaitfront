@@ -1,41 +1,13 @@
-import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { Plus, FileText, Users } from "lucide-react";
-
-interface Track {
-  id: string;
-  name: string;
-  description: string;
-  studentCount: number;
-  pendingReviews: number;
-  createdAt: string;
-}
+import { getTeacherTrackSummaries } from "../../data/teacherTrackStorage";
 
 export function TeacherTrackListPage() {
   const navigate = useNavigate();
-
-  // Mock data
-  const [tracks] = useState<Track[]>([
-    {
-      id: "t1",
-      name: "백엔드 개발 기초",
-      description: "Spring Boot와 JPA를 활용한 RESTful API 개발",
-      studentCount: 15,
-      pendingReviews: 3,
-      createdAt: "2026-03-15",
-    },
-    {
-      id: "t2",
-      name: "프론트엔드 심화",
-      description: "React와 TypeScript를 활용한 SPA 개발",
-      studentCount: 12,
-      pendingReviews: 0,
-      createdAt: "2026-03-10",
-    },
-  ]);
+  const tracks = getTeacherTrackSummaries();
 
   return (
     <div className="min-h-screen bg-slate-50 p-8">
