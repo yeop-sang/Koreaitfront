@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { createInstructorTrack } from "../../api/instructor";
@@ -12,11 +13,13 @@ import {
   getTodayDateString,
   upsertTeacherTrackRecord,
 } from "../../data/teacherTrackStorage";
+import { Textarea } from "../../components/ui/textarea";
 
 export function TeacherTrackCreatePage() {
   const navigate = useNavigate();
   const [trackName, setTrackName] = useState("");
   const [domainType, setDomainType] = useState("");
+  const [assignmentDesc, setAssignmentDesc] = useState("");
   const [materialFile, setMaterialFile] = useState<File | null>(null);
   const [rubricFile, setRubricFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -93,8 +96,7 @@ export function TeacherTrackCreatePage() {
         id: nextTrackId,
         name: trackName.trim(),
         description: domainType.trim(),
-        assignmentDesc: domainType.trim(),
-        files: nextFiles,
+        assignmentDesc: assignmentDesc.trim() || domainType.trim(),
         createdAt: getTodayDateString(),
         criteria: DEFAULT_TRACK_CRITERIA,
         students: [],
@@ -151,6 +153,15 @@ export function TeacherTrackCreatePage() {
                 placeholder="예: IT"
                 value={domainType}
                 onChange={(e) => setDomainType(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="assignmentDesc">과제 설명</Label>
+              <Textarea
+                id="assignmentDesc"
+                placeholder="과제의 목표, 제출 요구사항 등을 입력하세요"
+                value={assignmentDesc}
+                onChange={(e) => setAssignmentDesc(e.target.value)}
               />
             </div>
 

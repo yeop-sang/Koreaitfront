@@ -6,6 +6,8 @@ dist/
 coverage/
 .vite/
 *.tsbuildinfo
+playwright-report/
+test-results/
 
 # Environment files
 .env
@@ -32,3 +34,6 @@ dist
 # local-only mock setup
 .local/
 vite.config.local.ts
+
+plugins/
+tests/

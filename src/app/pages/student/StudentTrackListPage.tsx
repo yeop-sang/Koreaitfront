@@ -58,9 +58,9 @@ export function StudentTrackListPage() {
       <div className="max-w-5xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold">내 트랙</h1>
-          <p className="text-gray-600 mt-2">수강 중인 트랙 목록입니다</p>
-        </div>
+          <p className="text-gray-600 mt-2">증빙 업로드/강사 평가/패킷 생성 상태를 확인합니다</p>
 
+        </div>
         <div className="space-y-4">
           {tracks.map((track) => (
             <Card
@@ -80,21 +80,21 @@ export function StudentTrackListPage() {
                     {!track.hasSubmitted ? (
                       <Badge variant="outline" className="bg-yellow-50">
                         <Clock className="w-3 h-3 mr-1" />
-                        제출 필요
+                        증빙 업로드 필요
                       </Badge>
                     ) : track.isApproved ? (
                       <Badge className="bg-green-500">
                         <CheckCircle className="w-3 h-3 mr-1" />
-                        승인 완료
+                        패킷 생성 완료
                       </Badge>
                     ) : (
                       <Badge variant="outline" className="bg-blue-50">
                         <Clock className="w-3 h-3 mr-1" />
-                        승인 대기
+                        강사 평가 대기
                       </Badge>
                     )}
-                  </div>
                 </div>
+              </div>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center justify-between">
@@ -114,17 +114,17 @@ export function StudentTrackListPage() {
                     {!track.hasSubmitted ? (
                       <>
                         <FileText className="w-4 h-4 mr-2" />
-                        발표자료 업로드
+                        프로젝트 업로드
                       </>
                     ) : track.isApproved ? (
                       <>
                         <Download className="w-4 h-4 mr-2" />
-                        인증서 다운로드
+                        패킷 다운로드
                       </>
                     ) : (
                       <>
                         <Clock className="w-4 h-4 mr-2" />
-                        승인 대기 중
+                        강사 평가 대기
                       </>
                     )}
                   </Button>

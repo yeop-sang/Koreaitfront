@@ -44,18 +44,18 @@ export function TeacherPortfolioReviewPage() {
         sub.id === submissionId ? { ...sub, status: "approved" as const } : sub
       )
     );
-    toast.success("포트폴리오가 승인되었습니다.");
-  };
+    toast.success("증빙 검토가 완료되었습니다.");
 
+  };
   const handleReject = (submissionId: string) => {
     setSubmissions(
       submissions.map((sub) =>
         sub.id === submissionId ? { ...sub, status: "rejected" as const } : sub
       )
     );
-    toast.success("포트폴리오가 반려되었습니다.");
-  };
+    toast.success("증빙이 반려되었습니다.");
 
+  };
   const pendingSubmissions = submissions.filter((s) => s.status === "pending");
 
   return (
@@ -72,9 +72,9 @@ export function TeacherPortfolioReviewPage() {
         </div>
 
         <div className="mb-6">
-          <h1 className="text-3xl font-bold">포트폴리오 검토</h1>
+          <h1 className="text-3xl font-bold">증빙 자료 검토</h1>
           <p className="text-gray-600 mt-2">
-            학생들이 제출한 포트폴리오를 검토하고 승인합니다
+            학생 제출 증빙을 검토하고 평가 준비 상태를 확인합니다
           </p>
         </div>
 
@@ -83,10 +83,10 @@ export function TeacherPortfolioReviewPage() {
             <div className="text-center">
               <FileText className="w-12 h-12 mx-auto text-gray-400 mb-4" />
               <h3 className="text-lg font-semibold mb-2">
-                검토 대기 중인 포트폴리오가 없습니다
+                검토 대기 중인 증빙이 없습니다
               </h3>
               <p className="text-gray-600">
-                학생들이 포트폴리오를 제출하면 여기에 표시됩니다
+                학생이 증빙을 제출하면 여기에 표시됩니다
               </p>
             </div>
           </Card>
@@ -109,7 +109,7 @@ export function TeacherPortfolioReviewPage() {
                         검토 대기
                       </Badge>
                     ) : submission.status === "approved" ? (
-                      <Badge className="bg-green-500">승인 완료</Badge>
+                      <Badge className="bg-green-500">검토 완료</Badge>
                     ) : (
                       <Badge variant="destructive">반려됨</Badge>
                     )}
@@ -144,7 +144,7 @@ export function TeacherPortfolioReviewPage() {
                           className="gap-2"
                         >
                           <Check className="w-4 h-4" />
-                          승인
+                          검토 완료
                         </Button>
                         <Button
                           variant="destructive"

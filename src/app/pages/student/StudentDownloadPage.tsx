@@ -16,7 +16,7 @@ export function StudentDownloadPage() {
 
   const handleDownload = () => {
     // Mock download
-    toast.success("인증서 다운로드가 시작됩니다.");
+    toast.success("패킷 다운로드가 시작됩니다.");
   };
 
   return (
@@ -35,7 +35,7 @@ export function StudentDownloadPage() {
               <CardTitle className="text-2xl">{trackName}</CardTitle>
               <Badge className="bg-green-500">
                 <CheckCircle className="w-3 h-3 mr-1" />
-                승인 완료
+                패킷 생성 완료
               </Badge>
             </div>
           </CardHeader>
@@ -43,15 +43,19 @@ export function StudentDownloadPage() {
             <div className="p-6 bg-green-50 border border-green-200 rounded-lg text-center">
               <CheckCircle className="w-12 h-12 mx-auto text-green-600 mb-4" />
               <h3 className="text-lg font-semibold mb-2">
-                포트폴리오가 승인되었습니다!
+                취업 제출 패킷이 생성되었습니다!
               </h3>
               <p className="text-gray-600 mb-4">
-                강사가 제출한 포트폴리오를 승인했습니다. 이제 인증서를
-                다운로드할 수 있습니다.
+                강사 평가가 반영된 취업 제출 패킷이 준비되었습니다. 이제 패킷을 다운로드할 수 있습니다.
               </p>
               <Button onClick={handleDownload} className="gap-2">
                 <Download className="w-4 h-4" />
-                인증서 다운로드
+                패킷 다운로드
+              </Button>
+            </div>
+            <div className="mt-2 flex justify-center">
+              <Button variant="outline" onClick={() => navigate("/student/result")}>
+                패킷 미리보기
               </Button>
             </div>
 

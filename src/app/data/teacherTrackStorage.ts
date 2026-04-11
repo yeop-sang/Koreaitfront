@@ -73,28 +73,23 @@ const DEFAULT_TRACK_SUMMARIES: TeacherTrackSummary[] = [
 export const DEFAULT_TRACK_CRITERIA: TeacherCriterion[] = [
   {
     id: "c1",
-    name: "API 설계 능력",
-    description: "RESTful 원칙 준수 및 명세화 역량",
+    name: "요구사항 구조화",
+    description: "문제 정의, 범위, 예외 상황을 텍스트로 명확히 정리",
   },
   {
     id: "c2",
-    name: "DB 정규화",
-    description: "정규화 규칙에 따른 테이블 분리",
+    name: "API 및 데이터 설계",
+    description: "엔드포인트/요청/응답과 데이터 모델을 일관성 있게 연결",
   },
   {
     id: "c3",
-    name: "DB 튜닝",
-    description: "커넥션 풀 조절",
+    name: "구현 근거와 검증 가능성",
+    description: "코드·링크·결과·테스트를 연결해 검증 가능한 설명",
   },
   {
     id: "c4",
-    name: "코드 구조",
-    description: "코드의 구조화 및 모듈화 수준",
-  },
-  {
-    id: "c5",
-    name: "테스트 커버리지",
-    description: "단위 테스트 및 통합 테스트 완성도",
+    name: "협업과 역할 명확화",
+    description: "팀 결과와 개인 기여를 구분해 역할과 책임을 서술",
   },
 ];
 

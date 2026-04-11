@@ -140,7 +140,12 @@ export function TeacherTrackDetailPage() {
 
   const addCriterion = () => {
     if (!newCriterionName.trim()) return;
-
+    if (criteria.length >= 5) {
+      toast.error("평가 요소는 최대 5개까지 가능합니다.");
+      setIsAddingCriterion(false);
+      setNewCriterionName("");
+      return;
+    }
     const newCriterion: Criterion = {
       id: `c${criteria.length + 1}`,
       name: newCriterionName,
@@ -190,19 +195,21 @@ export function TeacherTrackDetailPage() {
       toast.error("저장할 트랙 정보를 찾을 수 없습니다.");
       return;
     }
-
+    if (criteria.length < 3 || criteria.length > 5) {
+      toast.error("평가 기준 수는 3~5개를 유지해야 합니다.");
+      return;
+    }
     upsertTeacherTrackRecord({
       id: trackId,
       name: trackName,
       description: trackDescription || "강의 자료 기반 평가표",
-      assignmentDesc: trackDescription,
+      assignmentDesc: savedTrack?.assignmentDesc ?? trackDescription,
       files,
       createdAt,
       criteria,
       students,
       scores,
     });
-
     toast.success("평가표가 저장되었습니다!");
   };
 
@@ -253,6 +260,9 @@ export function TeacherTrackDetailPage() {
             {trackDescription && (
               <p className="text-sm text-gray-600 mt-2">{trackDescription}</p>
             )}
+            {savedTrack?.assignmentDesc && (
+              <p className="text-sm text-gray-600 mt-1">과제 설명: {savedTrack.assignmentDesc}</p>
+            )}
             {files && files.length > 0 && (
               <p className="text-xs text-gray-500 mt-2">
                 강의자료: {files.join(", ")}
@@ -269,6 +279,12 @@ export function TeacherTrackDetailPage() {
               </div>
             )}
 
+            <div className="mb-3 text-sm text-gray-600 flex items-center gap-2">
+              <span className="shrink-0">단계:</span>
+              <span className="inline-block px-2 py-0.5 rounded border bg-white">기준 검수/확정</span>
+              <span className="opacity-60">→</span>
+              <span className="inline-block px-2 py-0.5 rounded border bg-blue-50">점수 입력</span>
+            </div>
             <div className="overflow-x-auto">
               <div className="min-w-max">
                 <table className="w-full border-collapse">
@@ -290,6 +306,9 @@ export function TeacherTrackDetailPage() {
                                   {criterion.description}
                                 </div>
                               )}
+                            <div className="text-[10px] text-gray-400 mt-1">
+                              메타: 태그 · 우선순위 · 근거 · 확인 필요
+                            </div>
                             </div>
                             <Button
                               variant="ghost"
@@ -448,7 +467,7 @@ export function TeacherTrackDetailPage() {
                         }}
                         className="w-[200px]"
                       />
-                      <Button onClick={addCriterion} size="sm">
+                      <Button onClick={addCriterion} size="sm" disabled={criteria.length >= 5}>
                         추가
                       </Button>
                       <Button
@@ -467,6 +486,7 @@ export function TeacherTrackDetailPage() {
                       variant="outline"
                       onClick={() => setIsAddingCriterion(true)}
                       className="gap-2"
+                      disabled={criteria.length >= 5}
                     >
                       <Plus className="w-4 h-4" />
                       평가 요소 추가

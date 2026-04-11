@@ -119,8 +119,8 @@ export function HomePage() {
       <div className="w-full max-w-md">
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">취업 포트폴리오 관리</CardTitle>
-            <CardDescription>아이디를 입력하면 권한에 맞는 화면으로 이동합니다.</CardDescription>
+            <CardTitle className="text-2xl">근거 기반 취업 제출 패킷</CardTitle>
+            <CardDescription>교육 결과물을 재조립해 강사 기준과 학생 기여를 연결하고, 관련 직무를 제안합니다.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">

@@ -3,6 +3,8 @@ import { useNavigate, useParams, useLocation } from 'react-router';
 import { Button } from '../../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
 import { Label } from '../../components/ui/label';
+import { Input } from '../../components/ui/input';
+import { Textarea } from '../../components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -34,6 +36,11 @@ export function StudentContributionPage() {
 
   const trackName = "백엔드 개발 기초"; // Mock data
 
+  const [role, setRole] = useState('');
+  const [personalContribution, setPersonalContribution] = useState('');
+  const [teamOutcome, setTeamOutcome] = useState('');
+  const [personalOutcome, setPersonalOutcome] = useState('');
+  const [extraComment, setExtraComment] = useState('');
   const [contributionScores, setContributionScores] = useState<ContributionScore[]>(
     (selectedCompetencies || []).map((comp: Competency) => ({
       competency: comp,
@@ -49,9 +56,16 @@ export function StudentContributionPage() {
 
   const handleSubmit = () => {
     // TODO: API 호출
-    console.log('기여도 저장:', contributionScores);
-
-    toast.success('기여도가 저장되었습니다!');
+    const payload = {
+      role,
+      personalContribution,
+      teamOutcome,
+      personalOutcome,
+      extraComment,
+      contributionScores,
+    };
+    console.log('기여 입력 저장:', payload);
+    toast.success('기여 입력이 저장되었습니다!');
     navigate('/student/tracks');
   };
 
@@ -88,6 +102,31 @@ export function StudentContributionPage() {
               {trackName} - 선택한 역량별로 본인의 기여도를 1~5점으로 평가하세요
             </CardDescription>
           </CardHeader>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="role">본인 역할</Label>
+                  <Input id="role" placeholder="예: 백엔드 API 설계 및 인증 흐름" value={role} onChange={(e) => setRole(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="teamOutcome">팀 결과</Label>
+                  <Input id="teamOutcome" placeholder="예: 주문/결제 기능 데모 완성" value={teamOutcome} onChange={(e) => setTeamOutcome(e.target.value)} />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="personalOutcome">개인 결과</Label>
+                  <Input id="personalOutcome" placeholder="예: API 설계 정리 및 예외 처리 개선" value={personalOutcome} onChange={(e) => setPersonalOutcome(e.target.value)} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="personalContribution">개인 기여 설명</Label>
+                <Textarea id="personalContribution" placeholder="본인이 수행한 작업과 근거를 구체적으로 작성" value={personalContribution} onChange={(e) => setPersonalContribution(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="extraComment">추가 코멘트 (선택)</Label>
+                <Textarea id="extraComment" placeholder="보완 예정 사항이나 참고 링크 등" value={extraComment} onChange={(e) => setExtraComment(e.target.value)} />
+              </div>
+            </div>
+            <div className="h-px bg-gray-200" />
           <CardContent className="space-y-6">
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <p className="text-sm text-blue-800">

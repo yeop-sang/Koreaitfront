@@ -19,8 +19,7 @@ export function StudentCompetencySelectionPage() {
   const navigate = useNavigate();
   const { trackId } = useParams();
   const location = useLocation();
-  const { files } = location.state || {};
-
+  const { files, projectName, links } = (location.state as any) || {};
   const trackName = "백엔드 개발 기초"; // Mock data
 
   // Mock AI response
@@ -113,6 +112,25 @@ export function StudentCompetencySelectionPage() {
               <p className="text-xs text-gray-500 mt-2">
                 제출한 파일: {files.join(", ")}
               </p>
+)}
+            {projectName && (
+              <p className="text-xs text-gray-500 mt-1">프로젝트명: {projectName}</p>
+            )}
+            {links && (
+              <div className="text-xs text-gray-500 mt-1 space-x-2">
+                {links.representative && (
+                  <a href={links.representative} target="_blank" rel="noreferrer" className="underline text-blue-600">대표</a>
+                )}
+                {links.github && (
+                  <a href={links.github} target="_blank" rel="noreferrer" className="underline text-blue-600">GitHub</a>
+                )}
+                {links.presentation && (
+                  <a href={links.presentation} target="_blank" rel="noreferrer" className="underline text-blue-600">발표</a>
+                )}
+                {links.deploy && (
+                  <a href={links.deploy} target="_blank" rel="noreferrer" className="underline text-blue-600">배포</a>
+                )}
+              </div>
             )}
           </CardHeader>
           <CardContent className="space-y-4">

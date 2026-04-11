@@ -57,7 +57,7 @@ export function StudentResultPage() {
   }, [navigate]);
 
   const handleDownload = () => {
-    alert('취업 제출용 자료가 다운로드됩니다');
+    alert('취업 제출 패킷이 다운로드됩니다');
     // TODO: PDF 다운로드 로직
   };
 
@@ -79,9 +79,9 @@ export function StudentResultPage() {
 
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>취업 제출용 포트폴리오</CardTitle>
+            <CardTitle>취업 제출 패킷</CardTitle>
             <CardDescription>
-              기업에 제출할 수 있는 형태로 자동 생성된 포트폴리오입니다
+              기업 제출용 텍스트 기반 패킷 미리보기입니다
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -113,16 +113,16 @@ export function StudentResultPage() {
 
             <Button onClick={handleDownload} className="w-full">
               <Download className="mr-2 h-4 w-4" />
-              취업 제출용 자료 다운로드
+              패킷 다운로드
             </Button>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>추천 직무</CardTitle>
+            <CardTitle>관련 직무</CardTitle>
             <CardDescription>
-              포트폴리오를 분석하여 적합한 직무를 추천합니다
+              패킷과 강사 평가를 바탕으로 관련 직무를 제안합니다
             </CardDescription>
           </CardHeader>
           <CardContent>

@@ -117,6 +117,19 @@ http://localhost:5173
 pnpm build
 ```
 
+로컬 Playwright 검증:
+
+```bash
+pnpm exec playwright install chromium
+pnpm verify:precommit
+```
+
+E2E만 빠르게 실행하려면:
+
+```bash
+pnpm test:e2e
+```
+
 ## 환경 변수
 
 - `VITE_API_BASE_URL`
@@ -126,6 +139,12 @@ pnpm build
 - `VITE_API_PROXY_TARGET`
   - 개발 서버에서 `/api/...` 요청을 프록시할 대상입니다.
   - 기본값은 `http://localhost:8000`입니다.
+
+## 로컬 E2E 테스트
+
+- Playwright 테스트는 로컬에서만 돌리는 사전 검증용입니다.
+- `tests/e2e/teacher-track-create.spec.ts`는 강사 트랙 생성 화면에서 PDF 업로드와 multipart 요청 구조를 목 응답으로 검증합니다.
+- 실제 백엔드 없이도 커밋 전에 빠르게 화면 흐름을 확인할 수 있습니다.
 
 ## 참고 사항
 
