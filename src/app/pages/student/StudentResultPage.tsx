@@ -1,166 +1,160 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router';
-import { Button } from '../../components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
-import { Separator } from '../../components/ui/separator';
-import { ArrowLeft, Download, Briefcase } from 'lucide-react';
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Badge } from "../../components/ui/badge";
+import { ArrowLeft, Download, ExternalLink, Loader2 } from "lucide-react";
+import { fetchEmploymentPack } from "../../api/portfolio";
+import { getStudentFlowProgress } from "../../data/studentFlowSession";
+import {
+  buildPackStateFromApiResponse,
+  getLocalEmploymentPackState,
+  type EmploymentPackState,
+  type EmploymentPackStatus,
+} from "../../data/studentPackState";
 
-interface JobRecommendation {
-  title: string;
-  reason: string;
-  missingSkills: string[];
-}
+const STATUS_LABEL: Record<EmploymentPackStatus, string> = {
+  pending: "패킷 생성 대기",
+  ready: "패킷 준비 완료",
+  denied: "승인 거절",
+  provisional: "잠정 상태",
+};
 
 export function StudentResultPage() {
   const navigate = useNavigate();
-  const [studentId, setStudentId] = useState('');
+  const location = useLocation();
+  const query = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const fallbackProgress = getStudentFlowProgress();
+  const localPackState = getLocalEmploymentPackState({ trackId: fallbackProgress.trackId });
+  const projectId = query.get("projectId") ?? (localPackState ? null : fallbackProgress.projectId);
 
-  const [portfolioSummary] = useState({
-    title: '온라인 쇼핑몰 프로젝트',
-    role: '백엔드 개발 담당',
-    period: '2024.01 - 2024.03',
-    skills: ['Node.js', 'Express', 'PostgreSQL', 'JWT', 'REST API'],
-    achievements: [
-      'RESTful API 15개 엔드포인트 설계 및 구현',
-      'JWT 기반 사용자 인증 시스템 개발',
-      'PostgreSQL 데이터베이스 설계 및 최적화',
-      'API 응답 속도 30% 개선',
-    ],
-  });
-
-  const [jobRecommendations] = useState<JobRecommendation[]>([
-    {
-      title: '백엔드 개발자',
-      reason: 'API 설계 및 데이터베이스 모델링 역량이 높게 평가됨',
-      missingSkills: ['클라우드 배포 경험', '대규모 트래픽 처리'],
-    },
-    {
-      title: '풀스택 개발자',
-      reason: '백엔드 개발 역량을 기반으로 프론트엔드 역량 추가 시 적합',
-      missingSkills: ['React/Vue 등 프론트엔드 프레임워크'],
-    },
-    {
-      title: '서버 개발자',
-      reason: 'API 개발 및 데이터베이스 설계 경험 보유',
-      missingSkills: ['마이크로서비스 아키텍처', '메시지 큐 활용'],
-    },
-  ]);
+  const [packState, setPackState] = useState<EmploymentPackState | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedStudentId = localStorage.getItem('studentId');
-    if (!savedStudentId) {
-      navigate('/student/login');
+    let isMounted = true;
+
+    const loadResult = async () => {
+      try {
+        let result: EmploymentPackState | null = null;
+
+        if (projectId) {
+          try {
+            const fileUrl = await fetchEmploymentPack(projectId);
+            result = buildPackStateFromApiResponse(fileUrl, fallbackProgress.trackId ?? null);
+          } catch {
+            result = getLocalEmploymentPackState({ trackId: fallbackProgress.trackId ?? null });
+          }
+        } else {
+          result = getLocalEmploymentPackState({ trackId: fallbackProgress.trackId ?? null });
+        }
+
+        if (!isMounted) return;
+
+        if (!result) {
+          setPackState(null);
+          setErrorMessage("프로젝트 ID를 찾을 수 없습니다.");
+          return;
+        }
+
+        setPackState(result);
+        setErrorMessage(null);
+      } catch (error) {
+        if (!isMounted) return;
+        setErrorMessage(error instanceof Error ? error.message : "결과 정보를 조회하지 못했습니다.");
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadResult();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [fallbackProgress.trackId, projectId]);
+
+  const status = packState?.status ?? null;
+  const fileUrl = packState?.fileUrl ?? null;
+
+  const openPack = () => {
+    if (!fileUrl) {
       return;
     }
-    setStudentId(savedStudentId);
-  }, [navigate]);
 
-  const handleDownload = () => {
-    alert('취업 제출용 자료가 다운로드됩니다');
-    // TODO: PDF 다운로드 로직
+    window.open(fileUrl, "_blank", "noopener,noreferrer");
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4">
-      <div className="max-w-4xl mx-auto">
-        <div className="flex items-center justify-between mb-4">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/student/contribution')}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
+    <div className="min-h-screen bg-slate-50 p-8">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <Button variant="outline" onClick={() => navigate(-1)}>
+            <ArrowLeft className="w-4 h-4 mr-2" />
             이전으로
           </Button>
-          <div className="text-sm text-slate-600">
-            학번: <span className="font-medium">{studentId}</span>
-          </div>
+          {status ? <Badge variant="outline">{STATUS_LABEL[status]}</Badge> : null}
         </div>
-
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>취업 제출용 포트폴리오</CardTitle>
-            <CardDescription>
-              기업에 제출할 수 있는 형태로 자동 생성된 포트폴리오입니다
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div>
-              <h3 className="font-medium text-lg mb-2">{portfolioSummary.title}</h3>
-              <p className="text-sm text-slate-600 mb-3">
-                {portfolioSummary.role} | {portfolioSummary.period}
-              </p>
-              <div className="flex flex-wrap gap-2 mb-4">
-                {portfolioSummary.skills.map((skill, idx) => (
-                  <Badge key={idx} variant="secondary">{skill}</Badge>
-                ))}
-              </div>
-            </div>
-
-            <Separator />
-
-            <div>
-              <h4 className="font-medium mb-3">주요 성과</h4>
-              <ul className="space-y-2">
-                {portfolioSummary.achievements.map((achievement, idx) => (
-                  <li key={idx} className="text-sm text-slate-700 flex items-start">
-                    <span className="mr-2">•</span>
-                    <span>{achievement}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <Button onClick={handleDownload} className="w-full">
-              <Download className="mr-2 h-4 w-4" />
-              취업 제출용 자료 다운로드
-            </Button>
-          </CardContent>
-        </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>추천 직무</CardTitle>
-            <CardDescription>
-              포트폴리오를 분석하여 적합한 직무를 추천합니다
-            </CardDescription>
+            <CardTitle className="text-2xl">결과 화면</CardTitle>
+            <p className="text-sm text-gray-600 mt-2">projectId: {projectId ?? "없음"}</p>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {jobRecommendations.map((job, idx) => (
-                <Card key={idx}>
-                  <CardContent className="pt-6">
-                    <div className="flex items-start gap-3">
-                      <Briefcase className="h-5 w-5 text-blue-600 mt-0.5" />
-                      <div className="flex-1">
-                        <h4 className="font-medium mb-2">{job.title}</h4>
-                        <p className="text-sm text-slate-600 mb-3">{job.reason}</p>
-                        {job.missingSkills.length > 0 && (
-                          <div>
-                            <p className="text-xs text-slate-500 mb-2">보완하면 좋은 역량:</p>
-                            <div className="flex flex-wrap gap-1">
-                              {job.missingSkills.map((skill, skillIdx) => (
-                                <Badge key={skillIdx} variant="outline" className="text-xs">
-                                  {skill}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+          <CardContent className="space-y-6">
+            {isLoading ? (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-6 text-center text-gray-600">
+                <Loader2 className="w-5 h-5 mx-auto mb-3 animate-spin" />
+                결과 정보를 조회하는 중입니다...
+              </div>
+            ) : errorMessage ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center text-red-700">
+                {errorMessage}
+              </div>
+            ) : status === "ready" && fileUrl ? (
+              <div className="rounded-lg border border-green-200 bg-green-50 p-6 space-y-4">
+                <h3 className="text-lg font-semibold">패킷 파일이 준비되었습니다</h3>
+                <p className="text-sm text-gray-700">
+                  현재 공개 backend 응답은 employment-pack file_url만 제공합니다. 예전 mock UI가 보여주던 포트폴리오 요약/관련 직무 추천은 현재 API 스펙에 없습니다.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button onClick={openPack}>
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    패킷 열기
+                  </Button>
+                  <Button variant="outline" onClick={openPack}>
+                    <Download className="w-4 h-4 mr-2" />
+                    패킷 다운로드
+                  </Button>
+                </div>
+              </div>
+            ) : status === "denied" ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+                강사 승인 상태 때문에 패킷 다운로드가 거절되었습니다.
+              </div>
+            ) : status === "provisional" ? (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-6 text-sm text-amber-900 space-y-3">
+                <p>누락/차단 사유: {packState?.blockingReason ?? "개인 기여 설명과 배포 링크가 누락되었습니다."}</p>
+              </div>
+            ) : (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-6 text-sm text-blue-800">
+                아직 패킷 파일이 생성되지 않았습니다. 상태/다운로드 화면에서 다시 확인하세요.
+              </div>
+            )}
 
-            <Button
-              variant="outline"
-              className="w-full mt-6"
-              onClick={() => navigate('/')}
-            >
-              처음으로 돌아가기
-            </Button>
+            <Card className="border-dashed">
+              <CardContent className="pt-6 text-sm text-gray-700 space-y-2">
+                <p className="font-medium">현재 공개 API 기준 제한 사항</p>
+                <ul className="list-disc list-inside space-y-1 text-gray-600">
+                  <li>관련 직무 추천 endpoint는 live OpenAPI에 노출되어 있지 않습니다.</li>
+                  <li>텍스트 기반 포트폴리오 요약/핵심 역량 요약 response도 현재 공개 스펙에 없습니다.</li>
+                  <li>따라서 이 화면은 패킷 파일 준비 여부를 truthfully 보여주는 역할만 수행합니다.</li>
+                </ul>
+              </CardContent>
+            </Card>
           </CardContent>
         </Card>
       </div>

@@ -1,34 +1,51 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { createInstructorTrack } from "../../api/instructor";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
-import { Textarea } from "../../components/ui/textarea";
 import { Label } from "../../components/ui/label";
-import { ArrowLeft, Upload, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 export function TeacherTrackCreatePage() {
   const navigate = useNavigate();
   const [trackName, setTrackName] = useState("");
-  const [trackDescription, setTrackDescription] = useState("");
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [domainType, setDomainType] = useState("");
+  const [materialFile, setMaterialFile] = useState<File | null>(null);
+  const [rubricFile, setRubricFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files).filter(
-        (file) => file.type === "application/pdf"
-      );
-      if (newFiles.length !== e.target.files.length) {
-        toast.error("PDF 파일만 업로드 가능합니다.");
-      }
-      setUploadedFiles([...uploadedFiles, ...newFiles]);
+  const handleFileChange = (
+    event: React.ChangeEvent<HTMLInputElement>,
+    type: "material" | "rubric"
+  ) => {
+    const selectedFile = event.target.files?.[0] ?? null;
+    if (!selectedFile) {
+      return;
     }
+
+    if (selectedFile.type !== "application/pdf") {
+      toast.error("PDF 파일만 업로드 가능합니다.");
+      event.target.value = "";
+      return;
+    }
+
+    if (type === "material") {
+      setMaterialFile(selectedFile);
+      return;
+    }
+
+    setRubricFile(selectedFile);
   };
 
-  const removeFile = (index: number) => {
-    setUploadedFiles(uploadedFiles.filter((_, i) => i !== index));
+  const removeFile = (type: "material" | "rubric") => {
+    if (type === "material") {
+      setMaterialFile(null);
+      return;
+    }
+
+    setRubricFile(null);
   };
 
   const handleSubmit = async () => {
@@ -36,31 +53,53 @@ export function TeacherTrackCreatePage() {
       toast.error("트랙 이름을 입력해주세요.");
       return;
     }
-    if (!trackDescription.trim()) {
-      toast.error("트랙 정보를 입력해주세요.");
+
+    if (!domainType.trim()) {
+      toast.error("강좌 분야를 입력해주세요.");
       return;
     }
-    if (uploadedFiles.length === 0) {
-      toast.error("강의자료를 최소 1개 이상 업로드해주세요.");
+
+    if (!materialFile) {
+      toast.error("강의 자료 PDF를 업로드해주세요.");
+      return;
+    }
+
+    if (!rubricFile) {
+      toast.error("루브릭 PDF를 업로드해주세요.");
+      return;
+    }
+
+    const instructorId = localStorage.getItem("userId")?.trim();
+    if (!instructorId) {
+      toast.error("로그인한 강사 정보를 찾을 수 없습니다.");
       return;
     }
 
     setIsUploading(true);
 
-    // Mock API call - AI가 평가지표 생성
-    setTimeout(() => {
-      setIsUploading(false);
-      toast.success("트랙이 생성되었습니다!");
-      // Navigate to track detail page with generated criteria
-      navigate("/teacher/track/t3", {
+    try {
+      const createdTrack = await createInstructorTrack(instructorId, {
+        name: trackName.trim(),
+        domainType: domainType.trim(),
+        materialFile,
+        rubricFile,
+      });
+
+      toast.success("트랙이 생성되었습니다.");
+      navigate(`/teacher/track/${createdTrack.track_id}`, {
         state: {
-          trackName,
-          trackDescription,
-          files: uploadedFiles.map((f) => f.name),
-          isNew: true,
+          trackName: trackName.trim(),
+          trackDescription: domainType.trim(),
+          isNew: createdTrack.status === "extracted",
         },
       });
-    }, 2000);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "트랙 생성 중 오류가 발생했습니다."
+      );
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (
@@ -76,6 +115,9 @@ export function TeacherTrackCreatePage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">새 트랙 생성</CardTitle>
+            <p className="text-sm text-gray-600 mt-2">
+              현재 live backend는 트랙명, 강좌 분야, 강의자료 PDF, 루브릭 PDF만 저장합니다.
+            </p>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
@@ -84,18 +126,17 @@ export function TeacherTrackCreatePage() {
                 id="trackName"
                 placeholder="예: 백엔드 개발 기초"
                 value={trackName}
-                onChange={(e) => setTrackName(e.target.value)}
+                onChange={(event) => setTrackName(event.target.value)}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="trackDescription">트랙 정보</Label>
-              <Textarea
-                id="trackDescription"
-                placeholder="트랙에 대한 설명을 입력하세요"
-                rows={4}
-                value={trackDescription}
-                onChange={(e) => setTrackDescription(e.target.value)}
+              <Label htmlFor="domainType">강좌 분야</Label>
+              <Input
+                id="domainType"
+                placeholder="예: IT"
+                value={domainType}
+                onChange={(event) => setDomainType(event.target.value)}
               />
             </div>
 
@@ -108,43 +149,73 @@ export function TeacherTrackCreatePage() {
                 </p>
                 <input
                   type="file"
-                  multiple
                   accept="application/pdf"
-                  onChange={handleFileChange}
+                  onChange={(event) => handleFileChange(event, "material")}
                   className="hidden"
-                  id="file-upload"
+                  id="material-file-upload"
                 />
                 <Button
+                  type="button"
                   variant="outline"
-                  onClick={() => document.getElementById("file-upload")?.click()}
+                  onClick={() => document.getElementById("material-file-upload")?.click()}
                 >
                   파일 선택
                 </Button>
               </div>
 
-              {uploadedFiles.length > 0 && (
-                <div className="mt-4 space-y-2">
-                  <p className="text-sm font-medium">
-                    업로드된 파일 ({uploadedFiles.length})
-                  </p>
-                  {uploadedFiles.map((file, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded"
-                    >
-                      <span className="text-sm">{file.name}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFile(index)}
-                        className="h-6 w-6 p-0"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
+              {materialFile ? (
+                <div className="mt-4 flex items-center justify-between p-3 bg-gray-50 rounded">
+                  <span className="text-sm">{materialFile.name}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeFile("material")}
+                    className="h-6 w-6 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-              )}
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label>루브릭 (PDF)</Label>
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+                <p className="text-sm text-gray-600 mb-4">
+                  PDF 파일을 드래그하거나 클릭하여 업로드하세요
+                </p>
+                <input
+                  type="file"
+                  accept="application/pdf"
+                  onChange={(event) => handleFileChange(event, "rubric")}
+                  className="hidden"
+                  id="rubric-file-upload"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => document.getElementById("rubric-file-upload")?.click()}
+                >
+                  파일 선택
+                </Button>
+              </div>
+
+              {rubricFile ? (
+                <div className="mt-4 flex items-center justify-between p-3 bg-gray-50 rounded">
+                  <span className="text-sm">{rubricFile.name}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeFile("rubric")}
+                    className="h-6 w-6 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : null}
             </div>
 
             <div className="flex justify-end gap-2 pt-4">
@@ -159,7 +230,7 @@ export function TeacherTrackCreatePage() {
                 {isUploading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    AI가 평가지표 생성 중...
+                    트랙 생성 중...
                   </>
                 ) : (
                   "트랙 생성"

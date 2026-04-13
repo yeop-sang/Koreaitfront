@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
@@ -22,76 +22,105 @@ import {
 import { Plus, Save, ArrowLeft, Trash2, Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "../../components/ui/utils";
+import { fetchInstructorStudents } from "../../api/instructor";
+import {
+  DEFAULT_LEGACY_CRITERIA,
+  TeacherCriterion,
+  TeacherTrackScore,
+  TeacherTrackStudent,
+  generateTeacherTrackId,
+  getLegacyTeacherCriteriaDraft,
+  getTeacherTrackRecord,
+  getTodayDateString,
+  saveLegacyTeacherCriteriaDraft,
+  upsertTeacherTrackRecord,
+} from "../../data/teacherTrackStorage";
 
 interface Student {
   id: string;
   name: string;
 }
 
-interface Criterion {
-  id: string;
-  name: string;
-  description: string;
-}
-
-interface Score {
-  criterionId: string;
-  studentId: string;
-  value: string; // "-" | "1" | "2" | "3" | "4" | "5"
-}
+type Criterion = TeacherCriterion;
+type Score = TeacherTrackScore;
 
 export function TeacherCriteriaPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { courseName, assignmentDesc, files } = location.state || {};
-
-  // Mock available students database
-  const availableStudents = [
-    { id: "s1", name: "김철수", phone: "1234" },
-    { id: "s2", name: "이영희", phone: "5678" },
-    { id: "s3", name: "박민수", phone: "9012" },
-    { id: "s4", name: "김철수", phone: "3456" }, // 동명이인
-    { id: "s5", name: "최지은", phone: "7890" },
-    { id: "s6", name: "정현우", phone: "2345" },
-    { id: "s7", name: "이영희", phone: "6789" }, // 동명이인
-  ];
+  const locationState =
+    (location.state as
+      | {
+          courseName?: string;
+          assignmentDesc?: string;
+          files?: string[];
+        }
+      | null) ?? null;
+  const persistedDraft = locationState?.courseName ? null : getLegacyTeacherCriteriaDraft();
+  const [trackId] = useState(() => persistedDraft?.trackId ?? generateTeacherTrackId());
+  const existingTrack = getTeacherTrackRecord(trackId);
+  const courseName = locationState?.courseName ?? persistedDraft?.courseName ?? "";
+  const assignmentDesc =
+    locationState?.assignmentDesc ?? persistedDraft?.assignmentDesc ?? "";
+  const files = locationState?.files ?? persistedDraft?.files ?? [];
 
   // Selected students for this assignment
-  const [students, setStudents] = useState<Student[]>([
-    { id: "s1", name: "김철수" },
-    { id: "s2", name: "이영희" },
-    { id: "s3", name: "박민수" },
-  ]);
-
-  // Mock auto-generated criteria from backend analysis
-  const [criteria, setCriteria] = useState<Criterion[]>([
-    {
-      id: "c1",
-      name: "코드 구조",
-      description: "코드의 구조화 및 모듈화 수준",
-    },
-    {
-      id: "c2",
-      name: "알고리즘 이해도",
-      description: "문제 해결을 위한 알고리즘 적용 능력",
-    },
-    {
-      id: "c3",
-      name: "문서화",
-      description: "코드 주석 및 README 작성 수준",
-    },
-    {
-      id: "c4",
-      name: "테스트 커버리지",
-      description: "단위 테스트 및 통합 테스트 완성도",
-    },
-  ]);
-
-  const [scores, setScores] = useState<Score[]>([]);
+  const [availableStudents, setAvailableStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<Student[]>(persistedDraft?.students ?? []);
+  const [criteria, setCriteria] = useState<Criterion[]>(
+    persistedDraft?.criteria.length ? persistedDraft.criteria : DEFAULT_LEGACY_CRITERIA
+  );
+  const [scores, setScores] = useState<Score[]>(persistedDraft?.scores ?? []);
   const [newCriterionName, setNewCriterionName] = useState("");
   const [isAddingCriterion, setIsAddingCriterion] = useState(false);
   const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [openStudentCombobox, setOpenStudentCombobox] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadStudents = async () => {
+      const instructorId = localStorage.getItem("userId") || "0000";
+
+      try {
+        const fetchedStudents = await fetchInstructorStudents(instructorId);
+        if (!isMounted) return;
+
+        setAvailableStudents(fetchedStudents);
+        setStudents((prevStudents) => {
+          if (prevStudents.length > 0) {
+            return prevStudents;
+          }
+
+          return fetchedStudents;
+        });
+      } catch {
+        if (!isMounted) return;
+        toast.error("학생 목록 조회에 실패했습니다.");
+      }
+    };
+
+    loadStudents();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!courseName) {
+      return;
+    }
+
+    saveLegacyTeacherCriteriaDraft({
+      trackId,
+      courseName,
+      assignmentDesc,
+      files,
+      criteria,
+      students,
+      scores,
+    });
+  }, [assignmentDesc, courseName, criteria, files, scores, students, trackId]);
 
   const getScore = (criterionId: string, studentId: string): string => {
     const score = scores.find(
@@ -170,19 +199,34 @@ export function TeacherCriteriaPage() {
   };
 
   const handleSave = async () => {
-    // Mock API call to save rubric data
-    // const data = {
-    //   courseName,
-    //   assignmentDesc,
-    //   files,
-    //   criteria,
-    //   scores,
-    // };
-    // await fetch('/api/teacher/rubric/save', {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify(data),
-    // });
+    saveLegacyTeacherCriteriaDraft({
+      trackId,
+      courseName,
+      assignmentDesc,
+      files,
+      criteria,
+      students,
+      scores,
+    });
+
+    upsertTeacherTrackRecord({
+      id: trackId,
+      name: courseName,
+      description: assignmentDesc || "강의 자료 기반 평가표",
+      assignmentDesc,
+      files,
+      createdAt: existingTrack?.createdAt ?? getTodayDateString(),
+      criteria,
+      students: students.map(
+        (student): TeacherTrackStudent => ({
+          id: student.id,
+          name: student.name,
+          hasSubmitted: false,
+          isApproved: false,
+        })
+      ),
+      scores,
+    });
 
     toast.success("평가표가 저장되었습니다!");
   };
@@ -339,7 +383,7 @@ export function TeacherCriteriaPage() {
                                       .map((student) => (
                                         <CommandItem
                                           key={student.id}
-                                          value={`${student.name}${student.phone}`}
+                                          value={`${student.name}${student.id}`}
                                           onSelect={() => addStudent(student.id)}
                                         >
                                           <Check
@@ -348,7 +392,7 @@ export function TeacherCriteriaPage() {
                                               "opacity-0"
                                             )}
                                           />
-                                          {student.name}{student.phone}
+                                          {student.name} ({student.id})
                                         </CommandItem>
                                       ))}
                                   </CommandGroup>

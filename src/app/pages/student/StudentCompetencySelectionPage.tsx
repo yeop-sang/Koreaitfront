@@ -1,94 +1,83 @@
-import { useState } from "react";
-import { useNavigate, useParams, useLocation } from "react-router";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router";
+import { fetchContributionCandidates, type ContributionSuggestion } from "../../api/student";
+import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Checkbox } from "../../components/ui/checkbox";
-import { Badge } from "../../components/ui/badge";
+import { getStudentFlowProgress, saveStudentFlowProgress } from "../../data/studentFlowSession";
 import { ArrowLeft } from "lucide-react";
-import { toast } from "sonner";
-
-interface Competency {
-  title: string;
-  description: string;
-  priority: number;
-  source_refs: string;
-  flags: string;
-}
 
 export function StudentCompetencySelectionPage() {
   const navigate = useNavigate();
-  const { trackId } = useParams();
   const location = useLocation();
-  const { files } = location.state || {};
+  const { trackId } = useParams();
+  const query = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const fallbackProgress = getStudentFlowProgress();
+  const projectId = query.get("projectId") ?? fallbackProgress.projectId;
+  const locationState = (location.state as { projectName?: string; uploadedStatus?: string | null } | null) ?? null;
 
-  const trackName = "백엔드 개발 기초"; // Mock data
+  const [suggestions, setSuggestions] = useState<ContributionSuggestion[]>([]);
+  const [selectedIndexes, setSelectedIndexes] = useState<Set<number>>(new Set());
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Mock AI response
-  const [competencies] = useState<Competency[]>([
-    {
-      title: "API 설계 능력",
-      description: "RESTful 원칙 준수 및 명세화 역량",
-      priority: 1,
-      source_refs: "강의안 p.12",
-      flags: "확인 필요",
-    },
-    {
-      title: "DB 정규화",
-      description: "정규화 규칙에 따른 테이블 분리",
-      priority: 2,
-      source_refs: "강의안 p.23",
-      flags: "확인 필요",
-    },
-    {
-      title: "DB 튜닝",
-      description: "커넥션 풀 조절",
-      priority: 3,
-      source_refs: "강의안 p.30",
-      flags: "확인 필요",
-    },
-    {
-      title: "인증/인가 구현",
-      description: "JWT 기반 인증 시스템 구축",
-      priority: 4,
-      source_refs: "강의안 p.45",
-      flags: "확인 필요",
-    },
-    {
-      title: "에러 핸들링",
-      description: "전역 예외 처리 및 로깅",
-      priority: 5,
-      source_refs: "강의안 p.56",
-      flags: "확인 필요",
-    },
-  ]);
+  useEffect(() => {
+    let isMounted = true;
 
-  const [selectedCompetencies, setSelectedCompetencies] = useState<Set<number>>(
-    new Set()
-  );
-
-  const toggleCompetency = (index: number) => {
-    const newSelected = new Set(selectedCompetencies);
-    if (newSelected.has(index)) {
-      newSelected.delete(index);
-    } else {
-      newSelected.add(index);
+    if (trackId) {
+      saveStudentFlowProgress({ trackId, projectId: projectId ?? null });
     }
-    setSelectedCompetencies(newSelected);
+
+    const loadSuggestions = async () => {
+      if (!projectId) {
+        if (!isMounted) return;
+        setErrorMessage("프로젝트 ID를 찾을 수 없습니다. 업로드 단계부터 다시 진행해주세요.");
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const nextSuggestions = await fetchContributionCandidates(projectId);
+        if (!isMounted) return;
+        setSuggestions(nextSuggestions);
+        setSelectedIndexes(new Set(nextSuggestions.map((_, index) => index)));
+        setErrorMessage(null);
+      } catch (error) {
+        if (!isMounted) return;
+        setErrorMessage(
+          error instanceof Error ? error.message : "기여도 후보를 불러오지 못했습니다."
+        );
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadSuggestions();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [projectId, trackId]);
+
+  const toggleSuggestion = (index: number) => {
+    setSelectedIndexes((current) => {
+      const next = new Set(current);
+      if (next.has(index)) {
+        next.delete(index);
+      } else {
+        next.add(index);
+      }
+      return next;
+    });
   };
 
   const handleNext = () => {
-    if (selectedCompetencies.size === 0) {
-      toast.error("최소 1개 이상의 역량을 선택해주세요.");
-      return;
-    }
-
-    const selected = Array.from(selectedCompetencies).map(
-      (index) => competencies[index]
-    );
-
-    navigate(`/student/track/${trackId}/contribution`, {
+    navigate(`/student/track/${trackId}/contribution?projectId=${encodeURIComponent(projectId ?? "")}`, {
       state: {
-        selectedCompetencies: selected,
+        selectedSuggestions: suggestions.filter((_, index) => selectedIndexes.has(index)),
       },
     });
   };
@@ -105,68 +94,97 @@ export function StudentCompetencySelectionPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">역량 선택</CardTitle>
+            <CardTitle className="text-2xl">기여도 후보 검토</CardTitle>
             <p className="text-sm text-gray-600 mt-2">
-              {trackName} - AI가 분석한 역량 중 본인이 수행한 항목을 선택하세요
+              projectId: {projectId ?? "없음"}
+              {locationState?.projectName ? ` / 프로젝트명: ${locationState.projectName}` : ""}
             </p>
-            {files && files.length > 0 && (
-              <p className="text-xs text-gray-500 mt-2">
-                제출한 파일: {files.join(", ")}
-              </p>
-            )}
+            {locationState?.uploadedStatus ? (
+              <p className="text-xs text-gray-500 mt-1">업로드 응답 상태: {locationState.uploadedStatus}</p>
+            ) : null}
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-6">
-              <p className="text-sm text-blue-800">
-                ✨ AI가 강의자료와 발표자료를 분석하여 아래 역량 후보를
-                추출했습니다. 본인이 실제로 수행한 역량을 선택해주세요.
-              </p>
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
+              backend는 역할/행동/결과/역량 suggestion 구조를 반환합니다. 선택한 후보는 다음 단계에서 수정해 저장합니다.
             </div>
 
-            <div className="space-y-3">
-              {competencies.map((competency, index) => (
-                <div
-                  key={index}
-                  className="flex items-start gap-4 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer"
-                  onClick={() => toggleCompetency(index)}
-                >
-                  <Checkbox
-                    checked={selectedCompetencies.has(index)}
-                    onCheckedChange={() => toggleCompetency(index)}
-                    className="mt-1"
-                  />
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-semibold">{competency.title}</h4>
-                      <Badge variant="outline" className="text-xs">
-                        우선순위 {competency.priority}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-gray-600 mb-2">
-                      {competency.description}
-                    </p>
-                    <div className="flex gap-3 text-xs text-gray-500">
-                      <span>출처: {competency.source_refs}</span>
-                      {competency.flags && (
-                        <span className="text-yellow-600">
-                          🔍 {competency.flags}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+            {isLoading ? (
+              <div className="text-sm text-gray-600">기여도 후보를 불러오는 중입니다...</div>
+            ) : errorMessage ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                {errorMessage}
+              </div>
+            ) : suggestions.length === 0 ? (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                backend가 반환한 후보가 없습니다. 다음 단계에서 수동으로 기여 정보를 입력할 수 있습니다.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {suggestions.map((suggestion, index) => (
+                  <Card key={`${suggestion.role}-${index}`}>
+                    <CardContent className="pt-6">
+                      <div className="flex items-start gap-4">
+                        <Checkbox
+                          checked={selectedIndexes.has(index)}
+                          onCheckedChange={() => toggleSuggestion(index)}
+                          className="mt-1"
+                        />
+                        <div className="flex-1 space-y-3">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h3 className="font-semibold text-lg">{suggestion.role}</h3>
+                            <Badge variant="outline">후보 {index + 1}</Badge>
+                          </div>
+
+                          {suggestion.actions.length > 0 ? (
+                            <div>
+                              <p className="text-sm font-medium mb-2">행동</p>
+                              <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+                                {suggestion.actions.map((action, actionIndex) => (
+                                  <li key={`${action}-${actionIndex}`}>{action}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : null}
+
+                          {suggestion.results.length > 0 ? (
+                            <div>
+                              <p className="text-sm font-medium mb-2">결과</p>
+                              <ul className="list-disc list-inside text-sm text-gray-700 space-y-1">
+                                {suggestion.results.map((result, resultIndex) => (
+                                  <li key={`${result}-${resultIndex}`}>{result}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : null}
+
+                          {suggestion.skills.length > 0 ? (
+                            <div>
+                              <p className="text-sm font-medium mb-2">관련 역량</p>
+                              <div className="flex flex-wrap gap-2">
+                                {suggestion.skills.map((skill, skillIndex) => (
+                                  <Badge key={`${skill}-${skillIndex}`} variant="secondary">
+                                    {skill}
+                                  </Badge>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
+
+                          {suggestion.source ? (
+                            <p className="text-xs text-gray-500">근거 출처: {suggestion.source}</p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
 
             <div className="flex items-center justify-between pt-6 border-t">
-              <p className="text-sm text-gray-600">
-                {selectedCompetencies.size}개 선택됨
-              </p>
+              <p className="text-sm text-gray-600">{selectedIndexes.size}개 후보 선택됨</p>
               <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => navigate("/student/tracks")}
-                >
+                <Button variant="outline" onClick={() => navigate("/student/tracks")}>
                   취소
                 </Button>
                 <Button onClick={handleNext}>다음</Button>

@@ -4,6 +4,7 @@ import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
+import { API_ENDPOINTS } from '../config/api';
 
 type LoginResponse = {
   isSuccess: boolean;
@@ -76,7 +77,7 @@ export function HomePage() {
     setErrorMessage('');
 
     try {
-      const response = await fetch('/api/login', {
+      const response = await fetch(API_ENDPOINTS.login, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -118,8 +119,8 @@ export function HomePage() {
       <div className="w-full max-w-md">
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl">취업 포트폴리오 관리</CardTitle>
-            <CardDescription>아이디를 입력하면 권한에 맞는 화면으로 이동합니다.</CardDescription>
+            <CardTitle className="text-2xl">근거 기반 취업 제출 패킷</CardTitle>
+            <CardDescription>교육 결과물을 재조립해 강사 기준과 학생 기여를 연결하고, 관련 직무를 제안합니다.</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
@@ -136,6 +137,7 @@ export function HomePage() {
               </div>
 
               {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
+
 
               <Button type="submit" className="w-full" disabled={isLoading}>
                 {isLoading ? '로그인 중...' : '로그인'}
