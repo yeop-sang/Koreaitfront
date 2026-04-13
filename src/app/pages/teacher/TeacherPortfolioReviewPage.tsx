@@ -10,8 +10,6 @@ import {
 } from "../../api/portfolio";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { Input } from "../../components/ui/input";
-import { Label } from "../../components/ui/label";
 import { ArrowLeft, Check, Download, ExternalLink, FileText, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,7 +20,7 @@ export function TeacherPortfolioReviewPage() {
   const [serviceMessage, setServiceMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [projectId, setProjectId] = useState("");
+  const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
   const [portfolioUrl, setPortfolioUrl] = useState<string | null>(null);
   const [isReviewing, setIsReviewing] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
@@ -64,17 +62,18 @@ export function TeacherPortfolioReviewPage() {
     };
   }, [trackId]);
 
-  const handleReview = async () => {
-    if (!projectId.trim()) {
-      toast.error("프로젝트 ID를 입력해주세요.");
+  const handleReview = async (projectId: number | null) => {
+    if (projectId === null) {
+      toast.error("아직 제출된 프로젝트가 없습니다.");
       return;
     }
 
+    setActiveProjectId(projectId);
     setIsReviewing(true);
     setApprovalStatus(null);
 
     try {
-      const nextUrl = await reviewProjectPortfolio(projectId.trim());
+      const nextUrl = await reviewProjectPortfolio(projectId);
       setPortfolioUrl(nextUrl);
       toast.success("포트폴리오 미리보기를 불러왔습니다.");
     } catch (error) {
@@ -87,15 +86,15 @@ export function TeacherPortfolioReviewPage() {
     }
   };
 
-  const handleApprove = async (isApproved: boolean) => {
-    if (!projectId.trim()) {
-      toast.error("프로젝트 ID를 입력해주세요.");
+  const handleApprove = async (projectId: number | null, isApproved: boolean) => {
+    if (projectId === null) {
+      toast.error("아직 제출된 프로젝트가 없습니다.");
       return;
     }
 
     setIsApproving(true);
     try {
-      const status = await approveProjectPortfolio(projectId.trim(), isApproved);
+      const status = await approveProjectPortfolio(projectId, isApproved);
       setApprovalStatus(status ?? (isApproved ? "approved" : "rejected"));
       toast.success(isApproved ? "포트폴리오 승인 요청을 보냈습니다." : "포트폴리오 반려 요청을 보냈습니다.");
     } catch (error) {
@@ -121,8 +120,7 @@ export function TeacherPortfolioReviewPage() {
           <CardHeader>
             <CardTitle className="text-2xl">트랙 포트폴리오 목록</CardTitle>
             <p className="text-sm text-gray-600 mt-2">
-              `/api/tracks/{trackId}/portfolio` 응답을 그대로 보여줍니다. 이 응답에는 현재 project_id가 포함되지 않아,
-              승인 API와 자동 연결할 수 없습니다.
+              학생별 제출 상태와 project_id를 바로 확인하고, 각 행에서 검토/승인을 진행합니다.
             </p>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -144,21 +142,76 @@ export function TeacherPortfolioReviewPage() {
               <div className="space-y-3">
                 {portfolios.map((portfolio) => (
                   <Card key={`${portfolio.studentId}-${portfolio.studentName}`}>
-                    <CardContent className="pt-6 flex items-center justify-between gap-4">
-                      <div>
-                        <div className="font-medium">{portfolio.studentName}</div>
-                        <div className="text-xs text-gray-500">학생 ID {portfolio.studentId}</div>
+                    <CardContent className="pt-6 space-y-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <div className="font-medium">{portfolio.studentName}</div>
+                          <div className="text-xs text-gray-500">학생 ID {portfolio.studentId}</div>
+                          <div className="text-xs text-gray-500">
+                            프로젝트 ID {portfolio.projectId ?? "미제출"}
+                          </div>
+                        </div>
+                        {portfolio.portfolioUrl ? (
+                          <Button asChild variant="outline">
+                            <a href={portfolio.portfolioUrl} target="_blank" rel="noreferrer">
+                              <ExternalLink className="w-4 h-4 mr-2" />
+                              포트폴리오 열기
+                            </a>
+                          </Button>
+                        ) : (
+                          <span className="text-sm text-gray-500">포트폴리오 URL 없음</span>
+                        )}
                       </div>
-                      {portfolio.portfolioUrl ? (
-                        <Button asChild variant="outline">
-                          <a href={portfolio.portfolioUrl} target="_blank" rel="noreferrer">
-                            <ExternalLink className="w-4 h-4 mr-2" />
-                            포트폴리오 열기
-                          </a>
+
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          onClick={() => handleReview(portfolio.projectId)}
+                          disabled={portfolio.projectId === null || isReviewing}
+                        >
+                          {isReviewing && activeProjectId === portfolio.projectId ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              미리보기 조회 중...
+                            </>
+                          ) : (
+                            <>
+                              <FileText className="w-4 h-4 mr-2" />
+                              검토
+                            </>
+                          )}
                         </Button>
-                      ) : (
-                        <span className="text-sm text-gray-500">포트폴리오 URL 없음</span>
-                      )}
+                        {activeProjectId === portfolio.projectId && portfolioUrl ? (
+                          <>
+                            <Button asChild variant="outline">
+                              <a href={portfolioUrl} target="_blank" rel="noreferrer">
+                                <Download className="w-4 h-4 mr-2" />
+                                포트폴리오 열기
+                              </a>
+                            </Button>
+                            <Button
+                              onClick={() => handleApprove(portfolio.projectId, true)}
+                              disabled={isApproving}
+                            >
+                              <Check className="w-4 h-4 mr-2" />
+                              승인
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              onClick={() => handleApprove(portfolio.projectId, false)}
+                              disabled={isApproving}
+                            >
+                              <X className="w-4 h-4 mr-2" />
+                              반려
+                            </Button>
+                          </>
+                        ) : null}
+                      </div>
+
+                      {activeProjectId === portfolio.projectId && approvalStatus ? (
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                          최근 승인 응답 상태: {approvalStatus}
+                        </div>
+                      ) : null}
                     </CardContent>
                   </Card>
                 ))}
@@ -167,68 +220,6 @@ export function TeacherPortfolioReviewPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">프로젝트 ID 기반 검토 / 승인</CardTitle>
-            <p className="text-sm text-gray-600 mt-2">
-              review/approve API는 project_id를 요구합니다. track portfolio 응답에 project_id가 없어서, 현재는 직접 입력해야 합니다.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
-              <div className="space-y-2">
-                <Label htmlFor="projectId">프로젝트 ID</Label>
-                <Input
-                  id="projectId"
-                  value={projectId}
-                  onChange={(event) => setProjectId(event.target.value)}
-                  placeholder="예: 6"
-                />
-              </div>
-              <Button onClick={handleReview} disabled={isReviewing}>
-                {isReviewing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    미리보기 조회 중...
-                  </>
-                ) : (
-                  <>
-                    <FileText className="w-4 h-4 mr-2" />
-                    미리보기 조회
-                  </>
-                )}
-              </Button>
-            </div>
-
-            {portfolioUrl ? (
-              <div className="rounded-lg border border-green-200 bg-green-50 p-4 space-y-3">
-                <p className="text-sm text-green-800">포트폴리오 미리보기 URL을 불러왔습니다.</p>
-                <div className="flex flex-wrap gap-2">
-                  <Button asChild variant="outline">
-                    <a href={portfolioUrl} target="_blank" rel="noreferrer">
-                      <Download className="w-4 h-4 mr-2" />
-                      포트폴리오 열기
-                    </a>
-                  </Button>
-                  <Button onClick={() => handleApprove(true)} disabled={isApproving}>
-                    <Check className="w-4 h-4 mr-2" />
-                    승인
-                  </Button>
-                  <Button variant="destructive" onClick={() => handleApprove(false)} disabled={isApproving}>
-                    <X className="w-4 h-4 mr-2" />
-                    반려
-                  </Button>
-                </div>
-              </div>
-            ) : null}
-
-            {approvalStatus ? (
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-                최근 승인 응답 상태: {approvalStatus}
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

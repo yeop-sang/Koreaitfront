@@ -222,6 +222,7 @@ export interface TrackPortfolioItem {
   studentId: string;
   studentName: string;
   portfolioUrl: string | null;
+  projectId: number | null;
 }
 
 export interface TrackPortfolioResult {
@@ -678,6 +679,7 @@ export async function fetchTrackPortfolios(trackId: string | number): Promise<Tr
         const record = toRecord(item);
         const studentId = toOptionalNumber(record?.student_id);
         const studentName = toOptionalString(record?.student_name);
+        const projectId = toOptionalNumber(record?.project_id);
 
         if (studentId === null || !studentName) {
           return null;
@@ -687,6 +689,7 @@ export async function fetchTrackPortfolios(trackId: string | number): Promise<Tr
           studentId: String(studentId),
           studentName,
           portfolioUrl: toOptionalString(record?.portfolio_url),
+          projectId,
         } satisfies TrackPortfolioItem;
       })
       .filter((item): item is TrackPortfolioItem => Boolean(item)),

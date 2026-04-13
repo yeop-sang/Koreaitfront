@@ -4,7 +4,7 @@ import { fetchInstructorTracks, type InstructorTrackSummary } from "../../api/in
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
-import { FileText, Plus } from "lucide-react";
+import { FileCheck, FileText, Plus } from "lucide-react";
 
 export function TeacherTrackListPage() {
   const navigate = useNavigate();
@@ -113,20 +113,33 @@ export function TeacherTrackListPage() {
                 </CardHeader>
                 <CardContent className="flex items-center justify-between gap-4 text-sm text-gray-600">
                   <span>live backend 기준 기본 정보만 제공됩니다.</span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      navigate(`/teacher/track/${track.id}`, {
-                        state: {
-                          trackName: track.name,
-                        },
-                      });
-                    }}
-                  >
-                    상세 보기
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        navigate(`/teacher/track/${track.id}/review`);
+                      }}
+                    >
+                      <FileCheck className="w-4 h-4 mr-2" />
+                      포트폴리오 검토
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        navigate(`/teacher/track/${track.id}`, {
+                          state: {
+                            trackName: track.name,
+                          },
+                        });
+                      }}
+                    >
+                      상세 보기
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
