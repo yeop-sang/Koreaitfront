@@ -46,8 +46,8 @@ export function StudentDownloadPage() {
 
         if (projectId) {
           try {
-            const fileUrl = await fetchEmploymentPack(projectId);
-            result = buildPackStateFromApiResponse(fileUrl, trackId ?? null);
+            const response = await fetchEmploymentPack(projectId);
+            result = buildPackStateFromApiResponse(response.fileUrl, response.status, trackId ?? null);
           } catch {
             result = getLocalEmploymentPackState({ trackId: trackId ?? null });
           }

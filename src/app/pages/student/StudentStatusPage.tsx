@@ -62,8 +62,8 @@ export function StudentStatusPage() {
 
         if (projectId) {
           try {
-            const fileUrl = await fetchEmploymentPack(projectId);
-            result = buildPackStateFromApiResponse(fileUrl, trackId ?? null);
+            const response = await fetchEmploymentPack(projectId);
+            result = buildPackStateFromApiResponse(response.fileUrl, response.status, trackId ?? null);
           } catch {
             result = getLocalEmploymentPackState({ trackId: trackId ?? null });
           }
@@ -101,6 +101,10 @@ export function StudentStatusPage() {
   const status = packState?.status ?? null;
   const meta = status ? STATUS_META[status] : null;
   const canOpenDownload = Boolean(trackId && (projectId || status === "provisional"));
+  const deniedCopy =
+    status === "denied"
+      ? "backend가 employment-pack 응답에서 denied를 반환했습니다. 강사 승인 상태를 다시 확인해야 합니다."
+      : null;
 
   return (
     <div className="min-h-screen bg-slate-50 p-8">
@@ -153,6 +157,7 @@ export function StudentStatusPage() {
                 )}
                 <h3 className="text-lg font-semibold">{meta.label}</h3>
                 <p className="text-gray-600">{meta.summary}</p>
+                {deniedCopy ? <p className="text-sm font-medium text-red-700">{deniedCopy}</p> : null}
                 {packState?.blockingReason ? (
                   <p className="text-sm font-medium text-amber-900">
                     누락/차단 사유: {packState.blockingReason}

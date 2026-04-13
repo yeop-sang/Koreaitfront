@@ -11,6 +11,7 @@ interface ApprovePortfolioResponse {
 
 interface EmploymentPackResponse {
   file_url?: string | null;
+  status?: string | null;
 }
 
 export async function reviewProjectPortfolio(projectId: string | number): Promise<string> {
@@ -47,12 +48,17 @@ export async function approveProjectPortfolio(
   return toOptionalString(data.status);
 }
 
-export async function fetchEmploymentPack(projectId: string | number): Promise<string | null> {
+export async function fetchEmploymentPack(
+  projectId: string | number
+): Promise<{ fileUrl: string | null; status: string | null }> {
   const data = await requestJson<EmploymentPackResponse>(
     API_ENDPOINTS.projectEmploymentPack(projectId),
     undefined,
     "취업 제출 패킷 조회에 실패했습니다."
   );
 
-  return toOptionalString(data.file_url);
+  return {
+    fileUrl: toOptionalString(data.file_url),
+    status: toOptionalString(data.status),
+  };
 }

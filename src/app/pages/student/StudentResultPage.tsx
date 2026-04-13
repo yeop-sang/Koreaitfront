@@ -41,8 +41,12 @@ export function StudentResultPage() {
 
         if (projectId) {
           try {
-            const fileUrl = await fetchEmploymentPack(projectId);
-            result = buildPackStateFromApiResponse(fileUrl, fallbackProgress.trackId ?? null);
+            const response = await fetchEmploymentPack(projectId);
+            result = buildPackStateFromApiResponse(
+              response.fileUrl,
+              response.status,
+              fallbackProgress.trackId ?? null
+            );
           } catch {
             result = getLocalEmploymentPackState({ trackId: fallbackProgress.trackId ?? null });
           }

@@ -189,9 +189,34 @@ export function getLocalEmploymentPackState(params?: { trackId?: string | null }
 
 export function buildPackStateFromApiResponse(
   fileUrl: string | null,
+  backendStatus: string | null,
   trackId: string | null
 ): EmploymentPackState {
-  if (fileUrl) {
+  if (backendStatus === "denied") {
+    return {
+      status: "denied",
+      fileUrl: null,
+      blockingReason: null,
+      previewBlockingReason: null,
+      trackId,
+      trackName: null,
+      source: "api",
+    };
+  }
+
+  if (backendStatus === "provisional") {
+    return {
+      status: "provisional",
+      fileUrl,
+      blockingReason: null,
+      previewBlockingReason: null,
+      trackId,
+      trackName: null,
+      source: "api",
+    };
+  }
+
+  if (backendStatus === "approved" || backendStatus === "certified" || fileUrl) {
     return {
       status: "ready",
       fileUrl,
@@ -220,8 +245,12 @@ export async function loadEmploymentPackState(params: {
 }): Promise<EmploymentPackState | null> {
   if (params.projectId) {
     try {
-      const fileUrl = await fetchEmploymentPack(params.projectId);
-      return buildPackStateFromApiResponse(fileUrl, normalizeText(params.trackId));
+      const response = await fetchEmploymentPack(params.projectId);
+      return buildPackStateFromApiResponse(
+        response.fileUrl,
+        response.status,
+        normalizeText(params.trackId)
+      );
     } catch {
       // keep the local demo state as a safety net when the API call fails
     }
