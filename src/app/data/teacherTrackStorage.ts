@@ -27,6 +27,9 @@ export interface TeacherTrackRecord {
   criteria: TeacherCriterion[];
   students: TeacherTrackStudent[];
   scores: TeacherTrackScore[];
+  criteriaConfirmed?: boolean;
+  hiddenCriterionIds?: string[];
+  hiddenStudentIds?: string[];
 }
 
 export interface TeacherTrackSummary {

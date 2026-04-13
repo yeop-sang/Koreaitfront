@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { createInstructorTrack } from "../../api/instructor";
@@ -6,37 +5,29 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
-import { ArrowLeft, Upload, X, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, Upload, X } from "lucide-react";
 import { toast } from "sonner";
-import {
-  DEFAULT_TRACK_CRITERIA,
-  getTodayDateString,
-  upsertTeacherTrackRecord,
-} from "../../data/teacherTrackStorage";
-import { Textarea } from "../../components/ui/textarea";
 
 export function TeacherTrackCreatePage() {
   const navigate = useNavigate();
   const [trackName, setTrackName] = useState("");
   const [domainType, setDomainType] = useState("");
-  const [assignmentDesc, setAssignmentDesc] = useState("");
   const [materialFile, setMaterialFile] = useState<File | null>(null);
   const [rubricFile, setRubricFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
   const handleFileChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
+    event: React.ChangeEvent<HTMLInputElement>,
     type: "material" | "rubric"
   ) => {
-    const selectedFile = e.target.files?.[0] ?? null;
-
+    const selectedFile = event.target.files?.[0] ?? null;
     if (!selectedFile) {
       return;
     }
 
     if (selectedFile.type !== "application/pdf") {
       toast.error("PDF 파일만 업로드 가능합니다.");
-      e.target.value = "";
+      event.target.value = "";
       return;
     }
 
@@ -62,14 +53,17 @@ export function TeacherTrackCreatePage() {
       toast.error("트랙 이름을 입력해주세요.");
       return;
     }
+
     if (!domainType.trim()) {
       toast.error("강좌 분야를 입력해주세요.");
       return;
     }
+
     if (!materialFile) {
       toast.error("강의 자료 PDF를 업로드해주세요.");
       return;
     }
+
     if (!rubricFile) {
       toast.error("루브릭 PDF를 업로드해주세요.");
       return;
@@ -90,25 +84,12 @@ export function TeacherTrackCreatePage() {
         materialFile,
         rubricFile,
       });
-      const nextTrackId = String(createdTrack.track_id);
-      const nextFiles = [materialFile.name, rubricFile.name];
-      upsertTeacherTrackRecord({
-        id: nextTrackId,
-        name: trackName.trim(),
-        description: domainType.trim(),
-        assignmentDesc: assignmentDesc.trim() || domainType.trim(),
-        createdAt: getTodayDateString(),
-        criteria: DEFAULT_TRACK_CRITERIA,
-        students: [],
-        scores: [],
-      });
 
-      toast.success("트랙이 생성되었습니다!");
-      navigate(`/teacher/track/${nextTrackId}`, {
+      toast.success("트랙이 생성되었습니다.");
+      navigate(`/teacher/track/${createdTrack.track_id}`, {
         state: {
           trackName: trackName.trim(),
           trackDescription: domainType.trim(),
-          files: nextFiles,
           isNew: createdTrack.status === "extracted",
         },
       });
@@ -134,6 +115,9 @@ export function TeacherTrackCreatePage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-2xl">새 트랙 생성</CardTitle>
+            <p className="text-sm text-gray-600 mt-2">
+              현재 live backend는 트랙명, 강좌 분야, 강의자료 PDF, 루브릭 PDF만 저장합니다.
+            </p>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="space-y-2">
@@ -142,7 +126,7 @@ export function TeacherTrackCreatePage() {
                 id="trackName"
                 placeholder="예: 백엔드 개발 기초"
                 value={trackName}
-                onChange={(e) => setTrackName(e.target.value)}
+                onChange={(event) => setTrackName(event.target.value)}
               />
             </div>
 
@@ -152,16 +136,7 @@ export function TeacherTrackCreatePage() {
                 id="domainType"
                 placeholder="예: IT"
                 value={domainType}
-                onChange={(e) => setDomainType(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="assignmentDesc">과제 설명</Label>
-              <Textarea
-                id="assignmentDesc"
-                placeholder="과제의 목표, 제출 요구사항 등을 입력하세요"
-                value={assignmentDesc}
-                onChange={(e) => setAssignmentDesc(e.target.value)}
+                onChange={(event) => setDomainType(event.target.value)}
               />
             </div>
 
@@ -175,7 +150,7 @@ export function TeacherTrackCreatePage() {
                 <input
                   type="file"
                   accept="application/pdf"
-                  onChange={(e) => handleFileChange(e, "material")}
+                  onChange={(event) => handleFileChange(event, "material")}
                   className="hidden"
                   id="material-file-upload"
                 />
@@ -188,22 +163,20 @@ export function TeacherTrackCreatePage() {
                 </Button>
               </div>
 
-              {materialFile && (
-                <div className="mt-4">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                    <span className="text-sm">{materialFile.name}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeFile("material")}
-                      className="h-6 w-6 p-0"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
+              {materialFile ? (
+                <div className="mt-4 flex items-center justify-between p-3 bg-gray-50 rounded">
+                  <span className="text-sm">{materialFile.name}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeFile("material")}
+                    className="h-6 w-6 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-              )}
+              ) : null}
             </div>
 
             <div className="space-y-2">
@@ -216,7 +189,7 @@ export function TeacherTrackCreatePage() {
                 <input
                   type="file"
                   accept="application/pdf"
-                  onChange={(e) => handleFileChange(e, "rubric")}
+                  onChange={(event) => handleFileChange(event, "rubric")}
                   className="hidden"
                   id="rubric-file-upload"
                 />
@@ -229,22 +202,20 @@ export function TeacherTrackCreatePage() {
                 </Button>
               </div>
 
-              {rubricFile && (
-                <div className="mt-4">
-                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                    <span className="text-sm">{rubricFile.name}</span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeFile("rubric")}
-                      className="h-6 w-6 p-0"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
+              {rubricFile ? (
+                <div className="mt-4 flex items-center justify-between p-3 bg-gray-50 rounded">
+                  <span className="text-sm">{rubricFile.name}</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeFile("rubric")}
+                    className="h-6 w-6 p-0"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
                 </div>
-              )}
+              ) : null}
             </div>
 
             <div className="flex justify-end gap-2 pt-4">

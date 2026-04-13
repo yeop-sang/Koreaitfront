@@ -1,167 +1,234 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
+import {
+  fetchTrackPortfolios,
+  type TrackPortfolioItem,
+} from "../../api/instructor";
+import {
+  approveProjectPortfolio,
+  reviewProjectPortfolio,
+} from "../../api/portfolio";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
-import { Badge } from "../../components/ui/badge";
-import { ArrowLeft, FileText, Check, X, Download } from "lucide-react";
+import { Input } from "../../components/ui/input";
+import { Label } from "../../components/ui/label";
+import { ArrowLeft, Check, Download, ExternalLink, FileText, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
-
-interface StudentSubmission {
-  id: string;
-  studentName: string;
-  submittedAt: string;
-  files: { name: string; url: string }[];
-  status: "pending" | "approved" | "rejected";
-}
 
 export function TeacherPortfolioReviewPage() {
   const navigate = useNavigate();
   const { trackId } = useParams();
+  const [portfolios, setPortfolios] = useState<TrackPortfolioItem[]>([]);
+  const [serviceMessage, setServiceMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState("");
+  const [portfolioUrl, setPortfolioUrl] = useState<string | null>(null);
+  const [isReviewing, setIsReviewing] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
+  const [approvalStatus, setApprovalStatus] = useState<string | null>(null);
 
-  const [submissions, setSubmissions] = useState<StudentSubmission[]>([
-    {
-      id: "sub1",
-      studentName: "김철수",
-      submittedAt: "2026-04-08 14:30",
-      files: [
-        { name: "발표자료.pdf", url: "#" },
-        { name: "프로젝트_문서.pdf", url: "#" },
-      ],
-      status: "pending",
-    },
-    {
-      id: "sub2",
-      studentName: "박민지",
-      submittedAt: "2026-04-08 16:20",
-      files: [{ name: "최종발표.pdf", url: "#" }],
-      status: "pending",
-    },
-  ]);
+  useEffect(() => {
+    let isMounted = true;
 
-  const handleApprove = (submissionId: string) => {
-    setSubmissions(
-      submissions.map((sub) =>
-        sub.id === submissionId ? { ...sub, status: "approved" as const } : sub
-      )
-    );
-    toast.success("증빙 검토가 완료되었습니다.");
+    const loadPortfolios = async () => {
+      if (!trackId) {
+        if (!isMounted) return;
+        setErrorMessage("트랙 정보를 찾을 수 없습니다.");
+        setIsLoading(false);
+        return;
+      }
 
+      try {
+        const result = await fetchTrackPortfolios(trackId);
+        if (!isMounted) return;
+        setPortfolios(result.portfolios);
+        setServiceMessage(result.message);
+        setErrorMessage(null);
+      } catch (error) {
+        if (!isMounted) return;
+        setErrorMessage(
+          error instanceof Error ? error.message : "포트폴리오 목록을 불러오지 못했습니다."
+        );
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadPortfolios();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [trackId]);
+
+  const handleReview = async () => {
+    if (!projectId.trim()) {
+      toast.error("프로젝트 ID를 입력해주세요.");
+      return;
+    }
+
+    setIsReviewing(true);
+    setApprovalStatus(null);
+
+    try {
+      const nextUrl = await reviewProjectPortfolio(projectId.trim());
+      setPortfolioUrl(nextUrl);
+      toast.success("포트폴리오 미리보기를 불러왔습니다.");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "포트폴리오 미리보기를 불러오지 못했습니다.";
+      setPortfolioUrl(null);
+      toast.error(message);
+    } finally {
+      setIsReviewing(false);
+    }
   };
-  const handleReject = (submissionId: string) => {
-    setSubmissions(
-      submissions.map((sub) =>
-        sub.id === submissionId ? { ...sub, status: "rejected" as const } : sub
-      )
-    );
-    toast.success("증빙이 반려되었습니다.");
 
+  const handleApprove = async (isApproved: boolean) => {
+    if (!projectId.trim()) {
+      toast.error("프로젝트 ID를 입력해주세요.");
+      return;
+    }
+
+    setIsApproving(true);
+    try {
+      const status = await approveProjectPortfolio(projectId.trim(), isApproved);
+      setApprovalStatus(status ?? (isApproved ? "approved" : "rejected"));
+      toast.success(isApproved ? "포트폴리오 승인 요청을 보냈습니다." : "포트폴리오 반려 요청을 보냈습니다.");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "포트폴리오 승인 처리에 실패했습니다."
+      );
+    } finally {
+      setIsApproving(false);
+    }
   };
-  const pendingSubmissions = submissions.filter((s) => s.status === "pending");
 
   return (
     <div className="min-h-screen bg-slate-50 p-8">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-5xl mx-auto space-y-6">
         <div className="mb-6">
-          <Button
-            variant="outline"
-            onClick={() => navigate(`/teacher/track/${trackId}`)}
-          >
+          <Button variant="outline" onClick={() => navigate(`/teacher/track/${trackId}`)}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             트랙으로 돌아가기
           </Button>
         </div>
 
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">증빙 자료 검토</h1>
-          <p className="text-gray-600 mt-2">
-            학생 제출 증빙을 검토하고 평가 준비 상태를 확인합니다
-          </p>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl">트랙 포트폴리오 목록</CardTitle>
+            <p className="text-sm text-gray-600 mt-2">
+              `/api/tracks/{trackId}/portfolio` 응답을 그대로 보여줍니다. 이 응답에는 현재 project_id가 포함되지 않아,
+              승인 API와 자동 연결할 수 없습니다.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isLoading ? (
+              <div className="text-sm text-gray-600">포트폴리오 목록을 불러오는 중입니다...</div>
+            ) : errorMessage ? (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                {errorMessage}
+              </div>
+            ) : serviceMessage ? (
+              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+                backend 응답 메시지: {serviceMessage}
+              </div>
+            ) : portfolios.length === 0 ? (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                조회 가능한 포트폴리오가 없습니다.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {portfolios.map((portfolio) => (
+                  <Card key={`${portfolio.studentId}-${portfolio.studentName}`}>
+                    <CardContent className="pt-6 flex items-center justify-between gap-4">
+                      <div>
+                        <div className="font-medium">{portfolio.studentName}</div>
+                        <div className="text-xs text-gray-500">학생 ID {portfolio.studentId}</div>
+                      </div>
+                      {portfolio.portfolioUrl ? (
+                        <Button asChild variant="outline">
+                          <a href={portfolio.portfolioUrl} target="_blank" rel="noreferrer">
+                            <ExternalLink className="w-4 h-4 mr-2" />
+                            포트폴리오 열기
+                          </a>
+                        </Button>
+                      ) : (
+                        <span className="text-sm text-gray-500">포트폴리오 URL 없음</span>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
-        {pendingSubmissions.length === 0 ? (
-          <Card className="p-12">
-            <div className="text-center">
-              <FileText className="w-12 h-12 mx-auto text-gray-400 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">
-                검토 대기 중인 증빙이 없습니다
-              </h3>
-              <p className="text-gray-600">
-                학생이 증빙을 제출하면 여기에 표시됩니다
-              </p>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl">프로젝트 ID 기반 검토 / 승인</CardTitle>
+            <p className="text-sm text-gray-600 mt-2">
+              review/approve API는 project_id를 요구합니다. track portfolio 응답에 project_id가 없어서, 현재는 직접 입력해야 합니다.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-[1fr_auto] md:items-end">
+              <div className="space-y-2">
+                <Label htmlFor="projectId">프로젝트 ID</Label>
+                <Input
+                  id="projectId"
+                  value={projectId}
+                  onChange={(event) => setProjectId(event.target.value)}
+                  placeholder="예: 6"
+                />
+              </div>
+              <Button onClick={handleReview} disabled={isReviewing}>
+                {isReviewing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    미리보기 조회 중...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="w-4 h-4 mr-2" />
+                    미리보기 조회
+                  </>
+                )}
+              </Button>
             </div>
-          </Card>
-        ) : (
-          <div className="space-y-4">
-            {submissions.map((submission) => (
-              <Card key={submission.id}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-xl">
-                        {submission.studentName}
-                      </CardTitle>
-                      <p className="text-sm text-gray-600 mt-1">
-                        제출일시: {submission.submittedAt}
-                      </p>
-                    </div>
-                    {submission.status === "pending" ? (
-                      <Badge variant="outline" className="bg-yellow-50">
-                        검토 대기
-                      </Badge>
-                    ) : submission.status === "approved" ? (
-                      <Badge className="bg-green-500">검토 완료</Badge>
-                    ) : (
-                      <Badge variant="destructive">반려됨</Badge>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <h4 className="font-medium mb-2">제출 파일</h4>
-                      <div className="space-y-2">
-                        {submission.files.map((file, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between p-3 bg-gray-50 rounded"
-                          >
-                            <div className="flex items-center gap-2">
-                              <FileText className="w-4 h-4 text-gray-600" />
-                              <span className="text-sm">{file.name}</span>
-                            </div>
-                            <Button variant="ghost" size="sm">
-                              <Download className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
 
-                    {submission.status === "pending" && (
-                      <div className="flex gap-2 pt-2">
-                        <Button
-                          onClick={() => handleApprove(submission.id)}
-                          className="gap-2"
-                        >
-                          <Check className="w-4 h-4" />
-                          검토 완료
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          onClick={() => handleReject(submission.id)}
-                          className="gap-2"
-                        >
-                          <X className="w-4 h-4" />
-                          반려
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+            {portfolioUrl ? (
+              <div className="rounded-lg border border-green-200 bg-green-50 p-4 space-y-3">
+                <p className="text-sm text-green-800">포트폴리오 미리보기 URL을 불러왔습니다.</p>
+                <div className="flex flex-wrap gap-2">
+                  <Button asChild variant="outline">
+                    <a href={portfolioUrl} target="_blank" rel="noreferrer">
+                      <Download className="w-4 h-4 mr-2" />
+                      포트폴리오 열기
+                    </a>
+                  </Button>
+                  <Button onClick={() => handleApprove(true)} disabled={isApproving}>
+                    <Check className="w-4 h-4 mr-2" />
+                    승인
+                  </Button>
+                  <Button variant="destructive" onClick={() => handleApprove(false)} disabled={isApproving}>
+                    <X className="w-4 h-4 mr-2" />
+                    반려
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
+            {approvalStatus ? (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                최근 승인 응답 상태: {approvalStatus}
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
