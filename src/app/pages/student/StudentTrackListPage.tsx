@@ -35,27 +35,19 @@ export function StudentTrackListPage() {
   const localFallbackTracks = useMemo(() => getLocalStudentTrackFallbacks(), []);
 
   const visibleTracks = useMemo(() => {
-    const merged = new Map<string, StudentTrackCard>();
+    if (tracks.length > 0) {
+      return tracks.map<StudentTrackCard>((track) => ({ kind: "api", id: track.id, name: track.name }));
+    }
 
-    tracks.forEach((track) => {
-      merged.set(track.id, { kind: "api", id: track.id, name: track.name });
-    });
-
-    localFallbackTracks.forEach((track) => {
-      if (!merged.has(track.id)) {
-        merged.set(track.id, {
-          kind: "local",
-          id: track.id,
-          name: track.name,
-          badgeText: track.badgeText,
-          blockingReason: track.blockingReason,
-          actionLabel: track.actionLabel,
-          statusPath: track.statusPath,
-        });
-      }
-    });
-
-    return Array.from(merged.values());
+    return localFallbackTracks.map<StudentTrackCard>((track) => ({
+      kind: "local",
+      id: track.id,
+      name: track.name,
+      badgeText: track.badgeText,
+      blockingReason: track.blockingReason,
+      actionLabel: track.actionLabel,
+      statusPath: track.statusPath,
+    }));
   }, [localFallbackTracks, tracks]);
 
   useEffect(() => {
@@ -114,7 +106,7 @@ export function StudentTrackListPage() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold">내 트랙</h1>
           <p className="text-gray-600 mt-2">
-            수강생 트랙 목록 API를 기준으로 렌더링합니다. 현재 backend가 상태 정보를 주지 않으면 업로드 단계부터 진행합니다.
+            수강생 트랙 목록은 API 응답을 우선 렌더링하고, 응답이 없거나 실패한 경우에만 로컬 데모 트랙을 보여줍니다.
           </p>
         </div>
 
@@ -212,9 +204,7 @@ export function StudentTrackListPage() {
                     <div className="flex items-start justify-between gap-4">
                       <div>
                         <CardTitle className="text-xl">{track.name}</CardTitle>
-                        <p className="text-sm text-gray-600 mt-2">
-                          현재 공개 backend 응답에는 상태 정보가 없어서 업로드 단계부터 진행합니다.
-                        </p>
+                        <p className="text-sm text-gray-600 mt-2">API 응답에 포함된 트랙 정보를 기준으로 진행합니다.</p>
                       </div>
                       <Badge variant="outline">트랙 ID {track.id}</Badge>
                     </div>

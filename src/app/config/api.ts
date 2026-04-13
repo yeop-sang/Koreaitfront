@@ -27,6 +27,7 @@ function buildBackendApiUrl(path: string): string {
 
 export const API_ENDPOINTS = {
   login: buildApiUrl('/api/auth/login'),
+  studentLogin: buildApiUrl('/api/auth/login'),
   instructorStudents: (instructorId: string) =>
     buildBackendApiUrl(`/api/instructor/${encodeURIComponent(instructorId)}/students`),
   instructorTracks: (instructorId: string) =>

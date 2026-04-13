@@ -1,5 +1,12 @@
 import { API_ENDPOINTS } from "../config/api";
-import { requestJson, toMessage, toOptionalNumber, toOptionalString, toRecord } from "./http";
+import { ApiError, requestJson, toMessage, toOptionalNumber, toOptionalString, toRecord } from "./http";
+
+export interface StudentLoginResponse {
+  isSuccess: boolean;
+  user_id: string | null;
+  name: string | null;
+  role: string | null;
+}
 
 export interface StudentTrackSummary {
   id: string;
@@ -88,6 +95,32 @@ function normalizeStringArray<T>(items: T[] | undefined, pick: (item: T) => unkn
   return items
     .map((item) => toOptionalString(pick(item)))
     .filter((value): value is string => Boolean(value));
+}
+
+export async function loginStudent(loginId: string): Promise<StudentLoginResponse> {
+  const data = await requestJson<unknown>(
+    API_ENDPOINTS.studentLogin,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ login_id: loginId }),
+    },
+    "학생 로그인에 실패했습니다."
+  );
+
+  const record = toRecord(data);
+  if (!record) {
+    throw new ApiError(500, "학생 로그인 응답 형식이 올바르지 않습니다.", data);
+  }
+
+  return {
+    isSuccess: Boolean(record.isSuccess),
+    user_id: toOptionalString(record.user_id),
+    name: toOptionalString(record.name),
+    role: toOptionalString(record.role),
+  };
 }
 
 export async function fetchStudentTracks(studentId: string): Promise<StudentTrackListResult> {

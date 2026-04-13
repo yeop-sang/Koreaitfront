@@ -187,46 +187,44 @@ export function getLocalEmploymentPackState(params?: { trackId?: string | null }
   };
 }
 
+export function buildPackStateFromApiResponse(
+  fileUrl: string | null,
+  trackId: string | null
+): EmploymentPackState {
+  if (fileUrl) {
+    return {
+      status: "ready",
+      fileUrl,
+      blockingReason: null,
+      previewBlockingReason: null,
+      trackId,
+      trackName: null,
+      source: "api",
+    };
+  }
+
+  return {
+    status: "pending",
+    fileUrl: null,
+    blockingReason: null,
+    previewBlockingReason: null,
+    trackId,
+    trackName: null,
+    source: "api",
+  };
+}
+
 export async function loadEmploymentPackState(params: {
   projectId?: string | number | null;
   trackId?: string | null;
 }): Promise<EmploymentPackState | null> {
   if (params.projectId) {
-    const fileUrl = await fetchEmploymentPack(params.projectId);
-
-    if (fileUrl === "denied") {
-      return {
-        status: "denied",
-        fileUrl: null,
-        blockingReason: null,
-        previewBlockingReason: null,
-        trackId: normalizeText(params.trackId),
-        trackName: null,
-        source: "api",
-      };
+    try {
+      const fileUrl = await fetchEmploymentPack(params.projectId);
+      return buildPackStateFromApiResponse(fileUrl, normalizeText(params.trackId));
+    } catch {
+      // keep the local demo state as a safety net when the API call fails
     }
-
-    if (fileUrl) {
-      return {
-        status: "ready",
-        fileUrl,
-        blockingReason: null,
-        previewBlockingReason: null,
-        trackId: normalizeText(params.trackId),
-        trackName: null,
-        source: "api",
-      };
-    }
-
-    return {
-      status: "pending",
-      fileUrl: null,
-      blockingReason: null,
-      previewBlockingReason: null,
-      trackId: normalizeText(params.trackId),
-      trackName: null,
-      source: "api",
-    };
   }
 
   return getLocalEmploymentPackState({ trackId: params.trackId ?? null });

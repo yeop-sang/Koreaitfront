@@ -4,10 +4,11 @@ import { Button } from "../../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 import { Badge } from "../../components/ui/badge";
 import { ArrowLeft, CheckCircle, Download, ExternalLink, Loader2, XCircle } from "lucide-react";
+import { fetchEmploymentPack } from "../../api/portfolio";
 import { getStudentFlowProgress, saveStudentFlowProgress } from "../../data/studentFlowSession";
 import {
+  buildPackStateFromApiResponse,
   getLocalEmploymentPackState,
-  loadEmploymentPackState,
   type EmploymentPackState,
   type EmploymentPackStatus,
 } from "../../data/studentPackState";
@@ -41,7 +42,19 @@ export function StudentDownloadPage() {
 
     const loadPack = async () => {
       try {
-        const result = await loadEmploymentPackState({ projectId, trackId: trackId ?? null });
+        let result: EmploymentPackState | null = null;
+
+        if (projectId) {
+          try {
+            const fileUrl = await fetchEmploymentPack(projectId);
+            result = buildPackStateFromApiResponse(fileUrl, trackId ?? null);
+          } catch {
+            result = getLocalEmploymentPackState({ trackId: trackId ?? null });
+          }
+        } else {
+          result = getLocalEmploymentPackState({ trackId: trackId ?? null });
+        }
+
         if (!isMounted) return;
 
         if (!result) {

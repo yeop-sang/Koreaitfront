@@ -5,12 +5,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../..
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { ArrowLeft } from 'lucide-react';
+import { loginStudent } from '../../api/student';
 
 export function StudentLoginPage() {
   const navigate = useNavigate();
   const [studentId, setStudentId] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!studentId.trim()) {
@@ -18,11 +21,29 @@ export function StudentLoginPage() {
       return;
     }
 
-    // TODO: 학번 확인 API 호출
-    // 임시로 로컬 스토리지에 저장
-    localStorage.setItem('studentId', studentId);
+    setIsLoading(true);
+    setErrorMessage('');
 
-    navigate('/student/upload');
+    try {
+      const response = await loginStudent(studentId.trim());
+
+      if (!response.isSuccess || !response.role) {
+        setErrorMessage('로그인에 실패했습니다. 학번을 확인해주세요.');
+        localStorage.setItem('studentId', studentId.trim());
+        return;
+      }
+
+      localStorage.setItem('userId', response.user_id ?? '');
+      localStorage.setItem('userRole', 'STUDENT');
+      localStorage.setItem('studentId', studentId.trim());
+
+      navigate('/student/tracks');
+    } catch {
+      setErrorMessage('로그인 중 오류가 발생했습니다. 다시 시도해주세요.');
+      localStorage.setItem('studentId', studentId.trim());
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -51,12 +72,15 @@ export function StudentLoginPage() {
                   placeholder="예: 2024001"
                   value={studentId}
                   onChange={(e) => setStudentId(e.target.value)}
+                  disabled={isLoading}
                   required
                 />
               </div>
 
-              <Button type="submit" className="w-full">
-                시작하기
+              {errorMessage ? <p className="text-sm text-red-600">{errorMessage}</p> : null}
+
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? '로그인 중...' : '시작하기'}
               </Button>
             </form>
           </CardContent>
